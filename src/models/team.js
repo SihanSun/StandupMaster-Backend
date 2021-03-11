@@ -23,10 +23,15 @@
  *           format: binary
  *           writeOnly: true
  *         announcement:
- *            type: string
+ *           type: string
  *         members:
- *            type: array
- *            items: 
- *              $ref: '#/components/schemas/User'
- *            readOnly: True
+ *           type: array
+ *           items: 
+ *             $ref: '#/components/schemas/User'
+ *           readOnly: True
+ *         meetings:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/Meeting'
+ *           readOnly: True
 */
