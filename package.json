@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "./node_modules/.bin/babel src --out-dir lib; zip -r app.zip node_modules lib lambda.js; rm -r lib"
+    "lint": "npx eslint src/**/*.js"
   },
   "repository": {
     "type": "git",
@@ -20,5 +20,9 @@
     "@vendia/serverless-express": "^4.3.3",
     "express": "^4.17.1",
     "swagger-jsdoc": "github:Surnet/swagger-jsdoc#1ae0406db47d1c2f9a83ffe99c0c4416e88953fc"
+  },
+  "devDependencies": {
+    "eslint": "^7.21.0",
+    "eslint-config-google": "^0.14.0"
   }
 }

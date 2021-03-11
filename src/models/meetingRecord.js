@@ -13,7 +13,7 @@
  *           type: string
  *         presentations:
  *           type: array
- *           items: 
+ *           items:
  *             type: object
- *            
+ *
 */

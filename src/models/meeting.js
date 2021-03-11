@@ -16,7 +16,7 @@
  *           example: Share your updates and statues
  *         weekdayTime:
  *           type: array
- *           items: 
+ *           items:
  *             type: string
  *             example: "Monday 09:00 - 09:30"
 */

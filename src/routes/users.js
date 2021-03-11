@@ -1,5 +1,5 @@
-var express = require('express');
-const router = express.Router()
+const express = require('express');
+const router = new express.Router();
 
 /**
  * @openapi
@@ -33,9 +33,9 @@ const router = express.Router()
  *       404:
  *         description: User doesn't exist
  */
-router.get('/:email', function (req, res, next) {
-  res.status(501).send('Not Implemented')
-})
+router.get('/:email', function(req, res, next) {
+  res.status(501).send('Not Implemented');
+});
 
 /**
  * @openapi
@@ -53,7 +53,7 @@ router.get('/:email', function (req, res, next) {
  *     requestBody:
  *       content:
  *         application/json:
- *           schema: 
+ *           schema:
  *             $ref: '#/components/schemas/User'
  *     responses:
  *       200:
@@ -67,8 +67,8 @@ router.get('/:email', function (req, res, next) {
  *       404:
  *         description: User doesn't exist
  */
-router.put('/:email', function (req, res) {
-  res.status(501).send('Not Implemented')
-})
+router.put('/:email', function(req, res) {
+  res.status(501).send('Not Implemented');
+});
 
 module.exports = router;

@@ -1,5 +1,5 @@
-var express = require('express');
-const router = express.Router();
+const express = require('express');
+const router = new express.Router();
 
 /**
  * @openapi
@@ -12,7 +12,7 @@ const router = express.Router();
  * @openapi
  * /teams/{id}:
  *   get:
- *     tags: 
+ *     tags:
  *     - teams
  *     summary: Get team by id
  *     parameters:
@@ -33,9 +33,9 @@ const router = express.Router();
  *       404:
  *         description: Team doesn't exist
  */
-router.get('/:id', function (req, res) {
-  res.status(501).send('Not Implemented')
-})
+router.get('/:id', function(req, res) {
+  res.status(501).send('Not Implemented');
+});
 
 /**
  * @openapi
@@ -58,9 +58,9 @@ router.get('/:id', function (req, res) {
  *             schema:
  *               $ref: '#/components/schemas/Team'
  */
-router.post('/', function (req, res) {
-  res.status(501).send('Not Implemented')
-})
+router.post('/', function(req, res) {
+  res.status(501).send('Not Implemented');
+});
 
 /**
  * @openapi
@@ -87,9 +87,9 @@ router.post('/', function (req, res) {
  *       404:
  *         description: Team doesn't exist
  */
- router.post('/', function (req, res) {
-  res.status(501).send('Not Implemented')
-})
+router.post('/', function(req, res) {
+  res.status(501).send('Not Implemented');
+});
 
 /**
  * @openapi
@@ -98,10 +98,10 @@ router.post('/', function (req, res) {
  *     tags:
  *       - teams
  *     summary: Add a member to the team
- *     description: The team owner's can add other users to the team. Users can also add themselves to the team using invitation code.
- *                  Note that if the requester provides the code param, the requester is assumed to be adding him/herself to a team. If the
- *                  requester provides the email param, the requester is assumed to be the team's owner and adding new member to the team.
- *                  Only one of the param should be provided.
+ *     description: The team owner's can add other users to the team. Users can also add themselves to the team using
+ *                  invitation code.Note that if the requester provides the code param, the requester is assumed to be
+ *                  adding him/herself to a team. If the requester provides the email param, the requester is assumed
+ *                  to be the team's owner and adding new member to the team. Only one of the param should be provided.
  *     parameters:
  *     - name: id
  *       in: path
@@ -121,7 +121,7 @@ router.post('/', function (req, res) {
  *                 type: string
  *     responses:
  *       200:
- *         description: Successful operation. 
+ *         description: Successful operation.
  *         content:
  *           application/json:
  *             schema:
@@ -133,9 +133,9 @@ router.post('/', function (req, res) {
  *       404:
  *         description: Team doesn't exist
  */
- router.post('/:id/members', function (req, res) {
-  res.status(501).send('Not Implemented')
-})
+router.post('/:id/members', function(req, res) {
+  res.status(501).send('Not Implemented');
+});
 
 /**
  * @openapi
@@ -163,7 +163,7 @@ router.post('/', function (req, res) {
  *                 example: "today's meeting is canceled"
  *     responses:
  *       200:
- *         description: Successful operation. 
+ *         description: Successful operation.
  *         content:
  *           application/json:
  *             schema:
@@ -175,9 +175,9 @@ router.post('/', function (req, res) {
  *       404:
  *         description: Team doesn't exist
  */
- router.put('/:id/announcement', function (req, res) {
-  res.status(501).send('Not Implemented')
-})
+router.put('/:id/announcement', function(req, res) {
+  res.status(501).send('Not Implemented');
+});
 
 /**
  * @openapi
@@ -200,7 +200,7 @@ router.post('/', function (req, res) {
  *             $ref: '#/components/schemas/Meeting'
  *     responses:
  *       200:
- *         description: Successful operation. 
+ *         description: Successful operation.
  *         content:
  *           application/json:
  *             schema:
@@ -212,9 +212,9 @@ router.post('/', function (req, res) {
  *       404:
  *         description: Team doesn't exist
  */
- router.post('/:id/meetings', function (req, res) {
-  res.status(501).send('Not Implemented')
-})
+router.post('/:id/meetings', function(req, res) {
+  res.status(501).send('Not Implemented');
+});
 
 /**
  * @openapi
@@ -231,7 +231,7 @@ router.post('/', function (req, res) {
  *       type: string
  *     responses:
  *       200:
- *         description: Successful operation. 
+ *         description: Successful operation.
  *         content:
  *           application/json:
  *             schema:
@@ -241,9 +241,9 @@ router.post('/', function (req, res) {
  *       404:
  *         description: Meeting doesn't exist
  */
- router.delete('/:id/meetings/:meetingName', function (req, res) {
-  res.status(501).send('Not Implemented')
-})
+router.delete('/:id/meetings/:meetingName', function(req, res) {
+  res.status(501).send('Not Implemented');
+});
 
 /**
  * @openapi
@@ -270,8 +270,8 @@ router.post('/', function (req, res) {
  *       404:
  *         description: Team doesn't exist
  */
- router.delete('/:id', function (req, res) {
-  res.status(501).send('Not Implemented')
-})
+router.delete('/:id', function(req, res) {
+  res.status(501).send('Not Implemented');
+});
 
 module.exports = router;

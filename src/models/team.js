@@ -26,7 +26,7 @@
  *           type: string
  *         members:
  *           type: array
- *           items: 
+ *           items:
  *             $ref: '#/components/schemas/User'
  *           readOnly: True
  *         meetings:

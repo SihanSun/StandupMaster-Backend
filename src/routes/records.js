@@ -1,5 +1,5 @@
-var express = require('express');
-const router = express.Router();
+const express = require('express');
+const router = new express.Router();
 
 /**
  * @openapi
@@ -12,7 +12,7 @@ const router = express.Router();
  * @openapi
  * /meeting-records/{team_id}:
  *   get:
- *     tags: 
+ *     tags:
  *     - meeting-records
  *     summary: Get all meeting records by team id
  *     parameters:
@@ -35,9 +35,9 @@ const router = express.Router();
  *       404:
  *         description: Team doesn't exist
  */
-router.get('/:teamId', function (req, res) {
-  res.status(501).send('Not Implemented')
-})
+router.get('/:teamId', function(req, res) {
+  res.status(501).send('Not Implemented');
+});
 
 /**
  * @openapi
@@ -60,8 +60,8 @@ router.get('/:teamId', function (req, res) {
  *             schema:
  *               $ref: '#/components/schemas/MeetingRecord'
  */
-router.post('/:teamId', function (req, res) {
-  res.status(501).send('Not Implemented')
-})
+router.post('/:teamId', function(req, res) {
+  res.status(501).send('Not Implemented');
+});
 
 module.exports = router;
