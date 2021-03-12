@@ -7,7 +7,10 @@
     "start": "nodemon src/index.js",
     "lint": "npx eslint src/**/*.js",
     "pack": "npm-pack-zip",
-    "deploy": "npm run pack && aws lambda update-function-code --function-name api --zip-file fileb://standupmaster-backend.zip && rm standupmaster-backend.zip"
+    "deploy": "npm run pack && aws lambda update-function-code --function-name api --zip-file fileb://standupmaster-backend.zip && rm standupmaster-backend.zip",
+    "createLayer": "mkdir nodejs && ln -s ../node_modules nodejs/node_modules && zip -r layer.zip nodejs",
+    "publishLayer": "aws lambda publish-layer-version --layer-name nodeDependencies --zip-file fileb://layer.zip",
+    "updateLayer": "aws lambda update-function-configuration --function-name api --layers"
   },
   "repository": {
     "type": "git",
@@ -25,6 +28,7 @@
     "dynamoose": "^2.7.1",
     "express": "^4.17.1",
     "express-validator": "^6.10.0",
+    "node-fetch": "^2.6.1",
     "swagger-jsdoc": "github:Surnet/swagger-jsdoc#1ae0406db47d1c2f9a83ffe99c0c4416e88953fc"
   },
   "devDependencies": {
