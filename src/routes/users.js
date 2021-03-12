@@ -1,5 +1,8 @@
 const express = require('express');
 const router = new express.Router();
+const {body} = require('express-validator');
+const {error} = require('../utils/middlewares');
+const UserModel = require('../models/user');
 
 /**
  * @openapi
@@ -33,9 +36,48 @@ const router = new express.Router();
  *       404:
  *         description: User doesn't exist
  */
-router.get('/:email', function(req, res, next) {
+router.get('/:email', function(req, res) {
   res.status(501).send('Not Implemented');
 });
+
+/**
+ * @openapi
+ * /users:
+ *   post:
+ *     tags:
+ *     - users
+ *     summary: Create a new user
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/User'
+ *     responses:
+ *       200:
+ *         description: Successful operation
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Bad request. Request data is invalid
+ *       401:
+ *         description: Not authorized. Requester can't view this user
+ *       404:
+ *         description: User doesn't exist
+ */
+router.post('/',
+    body('email').isEmail(),
+    body('displayName').exists(),
+    error,
+    async function(req, res) {
+      try {
+        const result = await UserModel.create(req.body);
+        res.send(result);
+      } catch (error) {
+        res.status(400).send(error);
+      }
+    });
 
 /**
  * @openapi

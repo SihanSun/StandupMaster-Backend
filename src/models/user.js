@@ -1,3 +1,5 @@
+const dynamoose = require('dynamoose');
+
 /**
  * @swagger
  * components:
@@ -6,9 +8,7 @@
  *       type: object
  *       required:
  *       - email
- *       - profilePictureUrl
  *       - displayName
- *       - blocked
  *       properties:
  *         email:
  *           type: string
@@ -33,3 +33,19 @@
  *           type: boolean
  *           readOnly: true
 */
+
+const userSchame = {
+  email: {
+    type: String,
+    hashKey: true,
+  },
+  displayName: String,
+  profilePictureUrl: String,
+  firstName: String,
+  lastName: String,
+  blocked: Boolean,
+};
+
+const UserModel = dynamoose.model('User', userSchame, {create: false});
+
+module.exports = UserModel;

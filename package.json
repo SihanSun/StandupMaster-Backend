@@ -4,7 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "lint": "npx eslint src/**/*.js"
+    "start": "nodemon src/index.js",
+    "lint": "npx eslint src/**/*.js",
+    "pack": "npm-pack-zip",
+    "deploy": "npm run pack && aws lambda update-function-code --function-name api --zip-file fileb://standupmaster-backend.zip && rm standupmaster-backend.zip"
   },
   "repository": {
     "type": "git",
@@ -18,11 +21,16 @@
   "homepage": "https://github.com/SihanSun/StandupMaster-Backend#readme",
   "dependencies": {
     "@vendia/serverless-express": "^4.3.3",
+    "cors": "^2.8.5",
+    "dynamoose": "^2.7.1",
     "express": "^4.17.1",
+    "express-validator": "^6.10.0",
     "swagger-jsdoc": "github:Surnet/swagger-jsdoc#1ae0406db47d1c2f9a83ffe99c0c4416e88953fc"
   },
   "devDependencies": {
+    "aws-sdk": "^2.862.0",
     "eslint": "^7.21.0",
-    "eslint-config-google": "^0.14.0"
+    "eslint-config-google": "^0.14.0",
+    "npm-pack-zip": "^1.2.9"
   }
 }
