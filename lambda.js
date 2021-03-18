@@ -1,6 +1,6 @@
 const serverlessExpress = require('@vendia/serverless-express');
 
 process.env.LAMBDA = true;
-const app = require('./src/index.js');
+const app = require('./dist/app.js').default;
 
 module.exports = serverlessExpress({app});

@@ -1,4 +1,5 @@
-const express = require('express');
+import express from 'express';
+
 const router = new express.Router();
 
 /**
@@ -274,4 +275,5 @@ router.delete('/:id', function(req, res) {
   res.status(501).send('Not Implemented');
 });
 
-module.exports = router;
+export default router;
+

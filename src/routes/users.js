@@ -1,8 +1,9 @@
-const express = require('express');
+import express from 'express';
+import {body} from 'express-validator';
+import {error} from '../utils/middlewares';
+import UserModel from '../models/user';
+
 const router = new express.Router();
-const {body} = require('express-validator');
-const {error} = require('../utils/middlewares');
-const UserModel = require('../models/user');
 
 /**
  * @openapi
@@ -113,4 +114,4 @@ router.put('/:email', function(req, res) {
   res.status(501).send('Not Implemented');
 });
 
-module.exports = router;
+export default router;

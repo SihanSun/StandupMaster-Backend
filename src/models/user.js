@@ -1,4 +1,4 @@
-const dynamoose = require('dynamoose');
+import dynamoose from 'dynamoose';
 
 /**
  * @swagger
@@ -48,4 +48,4 @@ const userSchame = {
 
 const UserModel = dynamoose.model('User', userSchame, {create: false});
 
-module.exports = UserModel;
+export default UserModel;

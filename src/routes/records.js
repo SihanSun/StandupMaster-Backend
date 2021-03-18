@@ -1,4 +1,5 @@
-const express = require('express');
+import express from 'express';
+
 const router = new express.Router();
 
 /**
@@ -64,4 +65,4 @@ router.post('/:teamId', function(req, res) {
   res.status(501).send('Not Implemented');
 });
 
-module.exports = router;
+export default router;

@@ -1,5 +1,5 @@
-const express = require('express');
-const swaggerJsDoc = require('swagger-jsdoc');
+import express from 'express';
+import swaggerJsDoc from 'swagger-jsdoc';
 
 const router = new express.Router();
 
@@ -14,14 +14,15 @@ const swaggerDefinition = {
 
 const options = {
   swaggerDefinition,
-  apis: ['./src/routes/*.js', './src/models/*.js'],
+  apis: process.env.LAMBDA ?
+        ['./dist/routes/*.js', './dist/models/*.js'] :
+        ['./src/routes/*.js', './src/models/*.js'],
 };
 const specs = swaggerJsDoc(options);
 
 router.get('/api-docs.json', (req, res) => {
   res.setHeader('Content-Type', 'application/json');
-  res.setHeader('Access-Control-Allow-Origin', '*');
   res.send(specs);
 });
 
-module.exports = router;
+export default router;

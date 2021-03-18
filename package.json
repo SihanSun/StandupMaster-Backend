@@ -3,13 +3,14 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "type": "module",
   "scripts": {
-    "start": "nodemon src/index.js",
+    "start": "nodemon --experimental-specifier-resolution=node src/server.js",
     "lint": "npx eslint src/**/*.js",
-    "pack": "npm-pack-zip",
-    "deploy": "npm run pack && aws lambda update-function-code --function-name api --zip-file fileb://standupmaster-backend.zip && rm standupmaster-backend.zip",
-    "createLayer": "mkdir nodejs && ln -s ../node_modules nodejs/node_modules && zip -r layer.zip nodejs",
-    "publishLayer": "aws lambda publish-layer-version --layer-name nodeDependencies --zip-file fileb://layer.zip",
+    "pack": "babel src --out-dir dist; zip -r app.zip dist lambda.js",
+    "deploy": "npm run pack && aws lambda update-function-code --function-name api --zip-file fileb://app.zip && rm app.zip",
+    "createLayer": "mkdir nodejs && ln -s ../node_modules nodejs/node_modules && zip -r layer.zip nodejs && rm -r nodejs",
+    "publishLayer": "aws lambda publish-layer-version --layer-name nodeDependencies --zip-file fileb://layer.zip && rm layer.zip",
     "updateLayer": "aws lambda update-function-configuration --function-name api --layers"
   },
   "repository": {
@@ -32,9 +33,11 @@
     "swagger-jsdoc": "github:Surnet/swagger-jsdoc#1ae0406db47d1c2f9a83ffe99c0c4416e88953fc"
   },
   "devDependencies": {
+    "@babel/cli": "^7.13.10",
+    "@babel/core": "^7.13.10",
+    "@babel/preset-env": "^7.13.10",
     "aws-sdk": "^2.862.0",
     "eslint": "^7.21.0",
-    "eslint-config-google": "^0.14.0",
-    "npm-pack-zip": "^1.2.9"
+    "eslint-config-google": "^0.14.0"
   }
 }

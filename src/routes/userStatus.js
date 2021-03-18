@@ -1,4 +1,5 @@
-const express = require('express');
+import express from 'express';
+
 const router = new express.Router();
 
 /**
@@ -72,4 +73,4 @@ router.put('/user-status/:email', function(req, res) {
   res.status(501).send('Not Implemented');
 });
 
-module.exports = router;
+export default router;
