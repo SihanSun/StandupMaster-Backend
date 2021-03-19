@@ -29,6 +29,7 @@
     "dynamoose": "^2.7.1",
     "express": "^4.17.1",
     "express-validator": "^6.10.0",
+    "jwt-decode": "^3.1.2",
     "node-fetch": "^2.6.1",
     "swagger-jsdoc": "github:Surnet/swagger-jsdoc#1ae0406db47d1c2f9a83ffe99c0c4416e88953fc"
   },
