@@ -37,8 +37,13 @@ const router = new express.Router();
  *       404:
  *         description: User doesn't exist
  */
-router.get('/:email', function(req, res) {
-  res.status(501).send('Not Implemented');
+router.get('/:email', async function(req, res) {
+  const user = await UserModel.get(req.params.email);
+  if (user) {
+    res.send(user);
+  } else {
+    res.status(404).send('User doesn\'t exist');
+  }
 });
 
 /**
@@ -62,10 +67,6 @@ router.get('/:email', function(req, res) {
  *               $ref: '#/components/schemas/User'
  *       400:
  *         description: Bad request. Request data is invalid
- *       401:
- *         description: Not authorized. Requester can't view this user
- *       404:
- *         description: User doesn't exist
  */
 router.post('/',
     body('email').isEmail(),
@@ -73,10 +74,10 @@ router.post('/',
     error,
     async function(req, res) {
       try {
-        const result = await UserModel.create(req.body);
-        res.send(result);
+        const user = await UserModel.create(req.body);
+        res.send(user);
       } catch (error) {
-        res.status(400).send(error);
+        res.status(400).send('User already exists');
       }
     });
 
@@ -110,8 +111,28 @@ router.post('/',
  *       404:
  *         description: User doesn't exist
  */
-router.put('/:email', function(req, res) {
-  res.status(501).send('Not Implemented');
-});
+router.put('/:email',
+    body('displayName').exists(),
+    error,
+    async function(req, res) {
+      const email = req.params.email;
+
+      if (req.headers.authorization.email !== email) {
+        res.status('401').send('Not authorized to update this user');
+        return;
+      }
+
+      const user = await UserModel.get(email);
+      if (user === undefined) {
+        res.status('404').send('User doesn\'t exist');
+        return;
+      }
+
+      const params = {...req.body};
+      params.email = email;
+
+      const result = await UserModel.update(params);
+      res.send(result);
+    });
 
 export default router;
