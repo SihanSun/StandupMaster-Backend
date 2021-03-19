@@ -29,12 +29,9 @@ import dynamoose from 'dynamoose';
  *         lastName:
  *           type: string
  *           example: "Brown"
- *         blocked:
- *           type: boolean
- *           readOnly: true
 */
 
-const userSchame = {
+const userSchema = {
   email: {
     type: String,
     hashKey: true,
@@ -43,9 +40,8 @@ const userSchame = {
   profilePictureUrl: String,
   firstName: String,
   lastName: String,
-  blocked: Boolean,
 };
 
-const UserModel = dynamoose.model('User', userSchame, {create: false});
+const UserModel = dynamoose.model('User', userSchema, {create: false});
 
 export default UserModel;

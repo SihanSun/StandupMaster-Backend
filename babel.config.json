@@ -10,5 +10,16 @@
         "corejs": "3.6.5"
       }
     ]
+  ],
+  "plugins": [
+    [
+      "module-resolver", 
+      {
+        "root": ["."],
+        "alias": {
+          "src": "./src"
+        }
+      }
+    ]
   ]
 }
