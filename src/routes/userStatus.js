@@ -1,4 +1,8 @@
 import express from 'express';
+import {body} from 'express-validator';
+
+import {error} from '../utils/middlewares';
+import UserStatusModel from '../models/userStatus';
 
 const router = new express.Router();
 
@@ -34,8 +38,13 @@ const router = new express.Router();
  *       404:
  *         description: User doesn't exist
  */
-router.get('/user-status/:email', function(req, res, next) {
-  res.status(501).send('Not Implemented');
+router.get('/:email', async function(req, res, next) {
+  const userStatus = await UserStatusModel.get(req.params.email);
+  if (userStatus) {
+    res.send(userStatus);
+  } else {
+    res.status(404).send('User doesn\'t exist');
+  }
 });
 
 
@@ -69,8 +78,35 @@ router.get('/user-status/:email', function(req, res, next) {
  *       404:
  *         description: User doesn't exist
  */
-router.put('/user-status/:email', function(req, res) {
-  res.status(501).send('Not Implemented');
-});
+router.put('/:email',
+    body('isBlocked').exists(),
+    body('presentation').exists(),
+    body('presentation').custom((value) => {
+      if (value && (!value.prevWork || !value.planToday)) {
+        throw new Error('presentation doesn\'t conform to schema');
+      }
+      return true;
+    }),
+    error,
+    async function(req, res) {
+      const email = req.params.email;
+
+      if (req.headers.authorization.email !== email) {
+        res.status('401').send('Not authorized to update this user');
+        return;
+      }
+
+      const userStatus = await UserStatusModel.get(email);
+      if (userStatus === undefined) {
+        res.status('404').send('User doesn\'t exist');
+        return;
+      }
+
+      const params = {...req.body};
+      params.email = email;
+
+      const result = await UserStatusModel.update(params);
+      res.send(result);
+    });
 
 export default router;

@@ -1,10 +1,12 @@
 import express from 'express';
 import cors from 'cors';
 
-import swagger from './swagger';
-import teams from './routes/teams';
-import users from './routes/users';
 import {decodeAuthToken} from './utils/middlewares';
+
+import swagger from './swagger';
+import users from './routes/users';
+import userStatus from './routes/userStatus';
+import teams from './routes/teams';
 
 const app = express();
 
@@ -17,5 +19,6 @@ app.use(cors());
 app.use('/docs', swagger);
 app.use('/teams', teams);
 app.use('/users', users);
+app.use('/user-status', userStatus);
 
 export default app;
