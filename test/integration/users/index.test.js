@@ -3,12 +3,18 @@ import jwtEncode from 'jwt-encode';
 
 import app from 'src/app';
 import UserModel from 'src/models/user';
+import UserStatus from 'src/models/userStatus';
 
 jest.mock('src/models/user', () => {
   return {
     get: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
+  };
+});
+jest.mock('src/models/userStatus', () => {
+  return {
+    create: jest.fn(),
   };
 });
 
@@ -91,7 +97,9 @@ describe('PUT /users/{email}', () => {
         .set('Authorization', token)
         .expect(404)
         .then((response) => {
-          expect(UserModel.get).toHaveBeenCalledTimes(1);
+          expect(UserModel.get)
+              .toHaveBeenCalledTimes(1)
+              .toHaveBeenCalledWith(user.email);
           done();
         });
   });
@@ -185,7 +193,7 @@ describe('POST /users/{email}', () => {
         });
   });
 
-  it('should work', (done) => {
+  it('should work and create corresponding UserStatus', (done) => {
     UserModel.create.mockResolvedValue(user);
 
     request(app)
@@ -196,6 +204,13 @@ describe('POST /users/{email}', () => {
           expect(UserModel.create)
               .toHaveBeenCalledTimes(1)
               .toHaveBeenCalledWith(user);
+          expect(UserStatus.create)
+              .toHaveBeenCalledTimes(1)
+              .toHaveBeenCalledWith({
+                email: user.email,
+                isBlocked: false,
+                presentation: {prevWork: '', planToday: ''},
+              });
           expect(response.body)
               .toEqual(user);
           done();

@@ -1,7 +1,9 @@
 import express from 'express';
 import {body} from 'express-validator';
+
 import {error} from '../utils/middlewares';
 import UserModel from '../models/user';
+import UserStatus from '../models/userStatus';
 
 const router = new express.Router();
 
@@ -75,6 +77,17 @@ router.post('/',
     async function(req, res) {
       try {
         const user = await UserModel.create(req.body);
+
+        const userStatus = {
+          email: user.email,
+          isBlocked: false,
+          presentation: {
+            prevWork: '',
+            planToday: '',
+          },
+        };
+        await UserStatus.create(userStatus);
+
         res.send(user);
       } catch (error) {
         res.status(400).send('User already exists');

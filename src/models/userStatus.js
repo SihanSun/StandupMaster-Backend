@@ -1,3 +1,5 @@
+import dynamoose from 'dynamoose';
+
 /**
  * @swagger
  * components:
@@ -16,5 +18,39 @@
  *         isBlocked:
  *           type: boolean
  *         presentation:
- *           type: object
+ *           $ref: '#/components/schemas/Presentation'
+ *     Presentation:
+ *       type: object
+ *       required:
+ *       - prevWork
+ *       - planToday
+ *       properties:
+ *         prevWork:
+ *           type: string
+ *         planToday:
+ *           type: string
 */
+const userStatusSchema = {
+  email: {
+    type: String,
+    hashKey: true,
+  },
+  isBlocked: Boolean,
+  presentation: {
+    type: Object,
+    schema: {
+      prevWork: {
+        type: String,
+        required: true,
+      },
+      planToday: {
+        type: String,
+        required: true,
+      },
+    },
+  },
+};
+
+const UserStatusModel = dynamoose.model('UserStatus', userStatusSchema, {create: false});
+
+export default UserStatusModel;
