@@ -138,20 +138,19 @@ router.put('/:id',
     async function(req, res) {
       const id = req.params.id;
 
-      if (req.headers.authorization.email !== req.body.ownerEmail) {
-        res.status('401').send('Not authorized to update this team');
-        return;
-      }
-
       const team = await TeamModel.get(id);
       if (team === undefined) {
         res.status('404').send('Team doesn\'t exist');
         return;
       }
 
-      // TODO change owner not supported yet
       if (req.headers.authorization.email !== team.ownerEmail) {
         res.status('401').send('Not authorized to update this team');
+        return;
+      }
+
+      if (req.headers.authorization.email !== req.body.ownerEmail) {
+        res.status('401').send('Changing owner not supported');
         return;
       }
 
