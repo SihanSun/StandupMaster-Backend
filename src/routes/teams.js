@@ -1,4 +1,11 @@
 import express from 'express';
+import TeamModel from '../models/team';
+import UserModel from '../models/user';
+
+import {body} from 'express-validator';
+import {error} from '../utils/middlewares';
+
+import uuid from 'uuid';
 
 const router = new express.Router();
 
@@ -34,8 +41,24 @@ const router = new express.Router();
  *       404:
  *         description: Team doesn't exist
  */
-router.get('/:id', function(req, res) {
-  res.status(501).send('Not Implemented');
+router.get('/:id', async function(req, res) {
+  const team = await TeamModel.get(req.params.id);
+  if (!team) {
+    res.status(404).send('Team doesn\'t exist');
+    return;
+  }
+
+  if (!team.memberEmails || !team.memberEmails.includes(req.headers.authorization.email)) {
+    res.status('401').send('Not authorized to get team');
+    return;
+  }
+
+  const members = await UserModel.batchGet(team.memberEmails);
+  team.members = members;
+  team.owner = members.filter((e) => e.email === team.ownerEmail).pop();
+  team.memberEmails = undefined;
+  team.ownerEmail = undefined;
+  res.send(team);
 });
 
 /**
@@ -59,9 +82,29 @@ router.get('/:id', function(req, res) {
  *             schema:
  *               $ref: '#/components/schemas/Team'
  */
-router.post('/', function(req, res) {
-  res.status(501).send('Not Implemented');
-});
+router.post('/',
+    body('name').exists(),
+    body('ownerEmail').exists(),
+    error,
+    async function(req, res) {
+      if (req.headers.authorization.email !== req.body.ownerEmail) {
+        res.status('401').send('Not authorized to create team');
+        return;
+      }
+
+      const uid = uuid.v4();
+      req.body.id = uid;
+      req.body.memberEmails = [];
+      req.body.memberEmails.push(req.body.ownerEmail);
+      req.body.meetings = [];
+
+      try {
+        const team = await TeamModel.create(req.body);
+        res.send(team);
+      } catch (error) {
+        res.status(400).send('Team already exists');
+      }
+    });
 
 /**
  * @openapi
@@ -88,9 +131,35 @@ router.post('/', function(req, res) {
  *       404:
  *         description: Team doesn't exist
  */
-router.post('/', function(req, res) {
-  res.status(501).send('Not Implemented');
-});
+router.put('/:id',
+    body('name').exists(),
+    body('ownerEmail').exists(),
+    error,
+    async function(req, res) {
+      const id = req.params.id;
+
+      const team = await TeamModel.get(id);
+      if (team === undefined) {
+        res.status('404').send('Team doesn\'t exist');
+        return;
+      }
+
+      if (req.headers.authorization.email !== team.ownerEmail) {
+        res.status('401').send('Not authorized to update this team');
+        return;
+      }
+
+      if (req.headers.authorization.email !== req.body.ownerEmail) {
+        res.status('401').send('Changing owner not supported');
+        return;
+      }
+
+      const params = req.body;
+      params.id = id;
+
+      const result = await TeamModel.update(params);
+      res.send(result);
+    });
 
 /**
  * @openapi
@@ -134,9 +203,42 @@ router.post('/', function(req, res) {
  *       404:
  *         description: Team doesn't exist
  */
-router.post('/:id/members', function(req, res) {
-  res.status(501).send('Not Implemented');
-});
+router.post('/:id/members',
+    // body('code').exists(),
+    body('email').exists(),
+    error,
+    async function(req, res) {
+      const id = req.params.id;
+
+      const team = await TeamModel.get(id);
+      if (team === undefined) {
+        res.status('404').send('Team doesn\'t exist');
+        return;
+      }
+
+      const {code, email} = req.body;
+      const user = await UserModel.get(email);
+      if (user === undefined) {
+        res.status('400').send('User doesn\'t exist');
+        return;
+      }
+
+      if (req.headers.authorization.email !== team.ownerEmail) {
+        res.status('401').send('Not authorized add member to this team');
+        return;
+      }
+
+      // TODO invite code auth
+
+      if (team.memberEmails.includes(email)) {
+        res.status('400').send('User already is a member');
+        return;
+      }
+
+      team.memberEmails.push(email);
+      const result = await TeamModel.update(team);
+      res.send(result);
+    });
 
 /**
  * @openapi
@@ -176,9 +278,29 @@ router.post('/:id/members', function(req, res) {
  *       404:
  *         description: Team doesn't exist
  */
-router.put('/:id/announcement', function(req, res) {
-  res.status(501).send('Not Implemented');
-});
+router.put('/:id/announcement',
+    body('announcement').exists(),
+    error,
+    async function(req, res) {
+      const id = req.params.id;
+
+      const team = await TeamModel.get(id);
+      if (team === undefined) {
+        res.status('404').send('Team doesn\'t exist');
+        return;
+      }
+
+      // change owner not supported yet
+      if (req.headers.authorization.email !== team.ownerEmail) {
+        res.status('401').send('Not authorized to update this team');
+        return;
+      }
+
+      team.announcement = req.body.announcement;
+
+      const result = await TeamModel.update(team);
+      res.send(result);
+    });
 
 /**
  * @openapi
@@ -213,9 +335,35 @@ router.put('/:id/announcement', function(req, res) {
  *       404:
  *         description: Team doesn't exist
  */
-router.post('/:id/meetings', function(req, res) {
-  res.status(501).send('Not Implemented');
-});
+router.post('/:id/meetings',
+    body('name').exists(),
+    body('weekdayTime').exists(),
+    error,
+    async function(req, res) {
+      const id = req.params.id;
+
+      const team = await TeamModel.get(id);
+      if (team === undefined) {
+        res.status('404').send('Team doesn\'t exist');
+        return;
+      }
+
+      if (req.headers.authorization.email !== team.ownerEmail) {
+        res.status('401').send('Not authorized add meeting to this team');
+        return;
+      }
+
+      const meeting = {...req.body};
+
+      if (team.meetings.filter((e)=>e.name === meeting.name).length!=0) {
+        res.status('400').send('Meeting name already exists');
+        return;
+      }
+
+      team.meetings.push(meeting);
+      const result = await TeamModel.update(team);
+      res.send(result);
+    });
 
 /**
  * @openapi
@@ -242,9 +390,31 @@ router.post('/:id/meetings', function(req, res) {
  *       404:
  *         description: Meeting doesn't exist
  */
-router.delete('/:id/meetings/:meetingName', function(req, res) {
-  res.status(501).send('Not Implemented');
-});
+router.delete('/:id/meetings/:meetingName',
+    async function(req, res) {
+      const {id, meetingName} = req.params;
+
+      const team = await TeamModel.get(id);
+      if (team === undefined) {
+        res.status('404').send('Team doesn\'t exist');
+        return;
+      }
+
+      if (req.headers.authorization.email !== team.ownerEmail) {
+        res.status('401').send('Not authorized delete meeting from this team');
+        return;
+      }
+
+      const newMeetings = team.meetings.filter((e) => e.name != meetingName);
+      if (newMeetings.length == team.meetings.length) {
+        res.status('404').send('Meeting doesn\'t exist');
+        return;
+      }
+
+      team.meetings = newMeetings;
+      const result = await TeamModel.update(team);
+      res.send(result);
+    });
 
 /**
  * @openapi
@@ -271,9 +441,24 @@ router.delete('/:id/meetings/:meetingName', function(req, res) {
  *       404:
  *         description: Team doesn't exist
  */
-router.delete('/:id', function(req, res) {
-  res.status(501).send('Not Implemented');
-});
+router.delete('/:id',
+    async function(req, res) {
+      const {id} = req.params;
+
+      const team = await TeamModel.get(id);
+      if (team === undefined) {
+        res.status('404').send('Team doesn\'t exist');
+        return;
+      }
+
+      if (req.headers.authorization.email !== team.ownerEmail) {
+        res.status('401').send('Not authorized delete this team');
+        return;
+      }
+
+      const result = await TeamModel.delete(id);
+      res.send(result);
+    });
 
 export default router;
 

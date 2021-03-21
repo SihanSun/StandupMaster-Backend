@@ -1,3 +1,5 @@
+import dynamoose from 'dynamoose';
+
 /**
  * @swagger
  * components:
@@ -6,6 +8,7 @@
  *       type: object
  *       required:
  *       - name
+ *       - ownerEmail
  *       properties:
  *         id:
  *           type: string
@@ -13,8 +16,11 @@
  *         name:
  *           type: string
  *         owner:
- *           type: string
+ *           $ref: '#/components/schemas/User'
  *           readOnly: true
+ *         ownerEmail:
+ *           type: string
+ *           writeOnly: true
  *         profilePictureUrl:
  *           type: string
  *           readOnly: true
@@ -35,3 +41,37 @@
  *             $ref: '#/components/schemas/Meeting'
  *           readOnly: True
 */
+
+
+const teamSchema = {
+  id: {
+    type: String,
+    hashKey: true,
+  },
+  name: String,
+  ownerEmail: String,
+  profilePictureUrl: String,
+  announcement: String,
+  memberEmails: {
+    type: Array,
+    schema: [String],
+  },
+  meetings: {
+    type: Array,
+    schema: [{
+      type: Object,
+      schema: {
+        name: String,
+        weekdayTime: {
+          type: Array,
+          schema: [String],
+        },
+        description: String,
+      },
+    }],
+  },
+};
+
+const TeamModel = dynamoose.model('Team', teamSchema, {create: false});
+
+export default TeamModel;
