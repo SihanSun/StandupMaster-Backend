@@ -45,6 +45,7 @@ router.get('/:id', async function(req, res) {
   const team = await TeamModel.get(req.params.id);
   if (!team) {
     res.status(404).send('Team doesn\'t exist');
+    return;
   }
 
   if (!team.memberEmails || !team.memberEmails.includes(req.headers.authorization.email)) {
@@ -401,7 +402,7 @@ router.delete('/:id/meetings/:meetingName',
       }
 
       if (req.headers.authorization.email !== team.ownerEmail) {
-        res.status('401').send('Not authorized delete member from this team');
+        res.status('401').send('Not authorized delete meeting from this team');
         return;
       }
 
@@ -452,7 +453,7 @@ router.delete('/:id',
       }
 
       if (req.headers.authorization.email !== team.ownerEmail) {
-        res.status('401').send('Not authorized add member to this team');
+        res.status('401').send('Not authorized delete this team');
         return;
       }
 
