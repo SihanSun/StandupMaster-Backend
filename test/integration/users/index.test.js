@@ -33,6 +33,8 @@ jest.mock('src/models/userInTeam', () => {
 jest.mock('src/utils/helpers', () => {
   return {
     checkTwoUsersInSameTeam: jest.fn(),
+    generateSignedUrlForProfilePicture: jest.fn(),
+    uploadProfilePicture: jest.fn(),
   };
 });
 
@@ -168,6 +170,7 @@ describe('PUT /users/{email}', () => {
       displayName: user.displayName,
       firstName: user.firstName,
       lastName: user.lastName,
+      profilePicture: 'picture',
     };
 
     UserModel.get.mockResolvedValue(oldUser);

@@ -1,11 +1,11 @@
 import express from 'express';
+import uuid from 'uuid';
+import {body} from 'express-validator';
+
 import TeamModel from '../models/team';
 import UserModel from '../models/user';
-
-import {body} from 'express-validator';
+import {generateSignedUrlForProfilePicture} from '../utils/helpers';
 import {error} from '../utils/middlewares';
-
-import uuid from 'uuid';
 
 const router = new express.Router();
 
@@ -55,6 +55,14 @@ router.get('/:id', async function(req, res) {
 
   const members = await UserModel.batchGet(team.memberEmails);
   team.members = members;
+
+  const promises = [];
+  for (const member of team.members) {
+    const promise = generateSignedUrlForProfilePicture(member.email).then((url) => member.profilePictureUrl = url);
+    promises.push(promise);
+  }
+  await Promise.all(promises);
+
   team.owner = members.filter((e) => e.email === team.ownerEmail).pop();
   team.memberEmails = undefined;
   team.ownerEmail = undefined;

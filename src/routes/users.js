@@ -2,7 +2,11 @@ import express from 'express';
 import {body} from 'express-validator';
 
 import {error} from '../utils/middlewares';
-import {checkTwoUsersInSameTeam} from '../utils/helpers';
+import {
+  checkTwoUsersInSameTeam,
+  generateSignedUrlForProfilePicture,
+  uploadProfilePicture,
+} from '../utils/helpers';
 import UserModel from '../models/user';
 import UserStatus from '../models/userStatus';
 import TeamModel from '../models/team';
@@ -59,6 +63,8 @@ router.get('/:email', async function(req, res) {
       user.team = team;
     }
   }
+
+  user.profilePictureUrl = await generateSignedUrlForProfilePicture(email);
 
   res.send(user);
 });
@@ -158,6 +164,11 @@ router.put('/:email',
 
       const params = {...req.body};
       params.email = email;
+
+      if (params.profilePicture !== undefined) {
+        await uploadProfilePicture(email, params.profilePicture);
+        delete params.profilePicture;
+      }
 
       const result = await UserModel.update(params);
       res.send(result);
