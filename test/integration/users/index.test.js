@@ -2,8 +2,11 @@ import request from 'supertest';
 import jwtEncode from 'jwt-encode';
 
 import app from 'src/app';
+import helpers from 'src/utils/helpers';
 import UserModel from 'src/models/user';
 import UserStatus from 'src/models/userStatus';
+import TeamModel from 'src/models/team';
+import UserInTeamModel from 'src/models/userInTeam';
 
 jest.mock('src/models/user', () => {
   return {
@@ -17,7 +20,26 @@ jest.mock('src/models/userStatus', () => {
     create: jest.fn(),
   };
 });
+jest.mock('src/models/team', () => {
+  return {
+    get: jest.fn(),
+  };
+});
+jest.mock('src/models/userInTeam', () => {
+  return {
+    get: jest.fn(),
+  };
+});
+jest.mock('src/utils/helpers', () => {
+  return {
+    checkTwoUsersInSameTeam: jest.fn(),
+  };
+});
 
+const requester = {
+  email: 'cs539@yale.edu',
+};
+const requesterToken = 'Bearer ' + jwtEncode({email: requester.email}, 'secret');
 
 const user = {
   email: 'cs439@yale.edu',
@@ -26,7 +48,10 @@ const user = {
   lastName: 'Master',
 };
 const token = 'Bearer ' + jwtEncode({email: user.email}, 'secret');
-
+const userInTeam = {
+  userEmail: user.email,
+  teamId: 'team1',
+};
 
 describe('GET /users/{email}', () => {
   const url = `/users/${user.email}`;
@@ -35,30 +60,58 @@ describe('GET /users/{email}', () => {
     jest.clearAllMocks();
   });
 
-  it('should return 404 if user not exists', (done) => {
-    UserModel.get.mockResolvedValue(undefined);
+  it('should return 401 if requester and user not in same team', (done) => {
+    helpers.checkTwoUsersInSameTeam.mockResolvedValue(false);
 
     request(app)
         .get(url)
-        .expect(404)
+        .set('Authorization', requesterToken)
+        .expect(401)
         .then((response) => {
-          expect(UserModel.get)
+          expect(helpers.checkTwoUsersInSameTeam)
               .toHaveBeenCalledTimes(1)
-              .toHaveBeenCalledWith(user.email);
+              .toHaveBeenCalledWith(requester.email, user.email);
           done();
         });
   });
 
-  it('should work', (done) => {
-    UserModel.get.mockResolvedValue(user);
+  it('should return with team info if requestor is same as user email', (done) => {
+    helpers.checkTwoUsersInSameTeam.mockResolvedValue(true);
+    UserModel.get.mockResolvedValue({...user});
+    UserInTeamModel.get.mockResolvedValue(userInTeam);
+    TeamModel.get.mockResolvedValue({'id': 'team1'});
 
     request(app)
         .get(url)
+        .set('Authorization', token)
+        .then((response) => {
+          expect(UserModel.get)
+              .toHaveBeenCalledTimes(1)
+              .toHaveBeenCalledWith(user.email);
+          expect(UserInTeamModel.get)
+              .toHaveBeenCalledTimes(1)
+              .toHaveBeenCalledWith(user.email);
+          expect(TeamModel.get)
+              .toHaveBeenCalledTimes(1)
+              .toHaveBeenCalledWith('team1');
+          done();
+        });
+  });
+
+  it('should notreturn with team info if requestor is not the same as user email', (done) => {
+    helpers.checkTwoUsersInSameTeam.mockResolvedValue(true);
+    UserModel.get.mockResolvedValue({...user});
+
+    request(app)
+        .get(url)
+        .set('Authorization', requesterToken)
         .expect(200)
         .then((response) => {
           expect(UserModel.get)
               .toHaveBeenCalledTimes(1)
               .toHaveBeenCalledWith(user.email);
+          expect(UserInTeamModel.get)
+              .toHaveBeenCalledTimes(0);
           expect(response.body)
               .toEqual(user);
           done();

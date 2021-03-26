@@ -2,8 +2,11 @@ import express from 'express';
 import {body} from 'express-validator';
 
 import {error} from '../utils/middlewares';
+import {checkTwoUsersInSameTeam} from '../utils/helpers';
 import UserModel from '../models/user';
 import UserStatus from '../models/userStatus';
+import TeamModel from '../models/team';
+import UserInTeamModel from '../models/userInTeam';
 
 const router = new express.Router();
 
@@ -20,7 +23,7 @@ const router = new express.Router();
  *   get:
  *     tags:
  *     - users
- *     summary: Get user by id
+ *     summary: Get user by id. If the requestor is querying for him/herself, team info will be included in the result
  *     parameters:
  *     - name: email
  *       in: path
@@ -36,16 +39,28 @@ const router = new express.Router();
  *               $ref: '#/components/schemas/User'
  *       401:
  *         description: Not authorized. Requester can't view this user
- *       404:
- *         description: User doesn't exist
  */
 router.get('/:email', async function(req, res) {
-  const user = await UserModel.get(req.params.email);
-  if (user) {
-    res.send(user);
-  } else {
-    res.status(404).send('User doesn\'t exist');
+  const requestorEmail = req.headers.authorization.email;
+  const email = req.params.email;
+
+  if (!(await checkTwoUsersInSameTeam(requestorEmail, email))) {
+    res.status(401).send('Not authorized to view this user');
+    return;
   }
+
+  const user = await UserModel.get(req.params.email);
+
+  // only return team info if requestor is querying for him/herself
+  if (email === requestorEmail) {
+    const userInTeam = await UserInTeamModel.get(email);
+    if (userInTeam !== undefined) {
+      const team = await TeamModel.get(userInTeam.teamId);
+      user.team = team;
+    }
+  }
+
+  res.send(user);
 });
 
 /**
