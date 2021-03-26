@@ -3,6 +3,7 @@ import jwtEncode from 'jwt-encode';
 
 import app from 'src/app';
 import UserStatusModel from 'src/models/userStatus';
+import helpers from 'src/utils/helpers';
 
 
 jest.mock('src/models/userStatus', () => {
@@ -11,7 +12,16 @@ jest.mock('src/models/userStatus', () => {
     update: jest.fn(),
   };
 });
+jest.mock('src/utils/helpers', () => {
+  return {
+    checkTwoUsersInSameTeam: jest.fn(),
+  };
+});
 
+const requester = {
+  email: 'cs539@yale.edu',
+};
+const requesterToken = 'Bearer ' + jwtEncode({email: requester.email}, 'secret');
 
 const userStatus = {
   email: 'cs439@yale.edu',
@@ -31,27 +41,33 @@ describe('GET /user-status/{email}', () => {
     jest.clearAllMocks();
   });
 
-  it('should return 404 if user not exists', (done) => {
-    UserStatusModel.get.mockResolvedValue(undefined);
+  it('should return 401 if requester and user not in same team', (done) => {
+    helpers.checkTwoUsersInSameTeam.mockResolvedValue(false);
 
     request(app)
         .get(url)
-        .expect(404)
+        .set('Authorization', requesterToken)
+        .expect(401)
         .then((response) => {
-          expect(UserStatusModel.get)
+          expect(helpers.checkTwoUsersInSameTeam)
               .toHaveBeenCalledTimes(1)
-              .toHaveBeenCalledWith(userStatus.email);
+              .toHaveBeenCalledWith(requester.email, userStatus.email);
           done();
         });
   });
 
   it('should work', (done) => {
+    helpers.checkTwoUsersInSameTeam.mockResolvedValue(true);
     UserStatusModel.get.mockResolvedValue(userStatus);
 
     request(app)
         .get(url)
+        .set('Authorization', requesterToken)
         .expect(200)
         .then((response) => {
+          expect(helpers.checkTwoUsersInSameTeam)
+              .toHaveBeenCalledTimes(1)
+              .toHaveBeenCalledWith(requester.email, userStatus.email);
           expect(UserStatusModel.get)
               .toHaveBeenCalledTimes(1)
               .toHaveBeenCalledWith(userStatus.email);

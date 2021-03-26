@@ -29,6 +29,8 @@ import dynamoose from 'dynamoose';
  *         lastName:
  *           type: string
  *           example: "Brown"
+ *         team:
+ *           $ref: '#/components/schemas/Team'
 */
 
 const userSchema = {

@@ -2,6 +2,7 @@ import express from 'express';
 import {body} from 'express-validator';
 
 import {error} from '../utils/middlewares';
+import {checkTwoUsersInSameTeam} from '../utils/helpers';
 import UserStatusModel from '../models/userStatus';
 
 const router = new express.Router();
@@ -35,16 +36,15 @@ const router = new express.Router();
  *               $ref: '#/components/schemas/UserStatus'
  *       401:
  *         description: Not authorized. Requester can't view this user status
- *       404:
- *         description: User doesn't exist
  */
 router.get('/:email', async function(req, res, next) {
-  const userStatus = await UserStatusModel.get(req.params.email);
-  if (userStatus) {
-    res.send(userStatus);
-  } else {
-    res.status(404).send('User doesn\'t exist');
+  if (!(await checkTwoUsersInSameTeam(req.headers.authorization.email, req.params.email))) {
+    res.status(401).send('Not authorized to view this user');
+    return;
   }
+
+  const userStatus = await UserStatusModel.get(req.params.email);
+  res.send(userStatus);
 });
 
 
