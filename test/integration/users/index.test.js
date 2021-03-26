@@ -5,7 +5,6 @@ import app from 'src/app';
 import helpers from 'src/utils/helpers';
 import UserModel from 'src/models/user';
 import UserStatus from 'src/models/userStatus';
-import TeamModel from 'src/models/team';
 import UserInTeamModel from 'src/models/userInTeam';
 
 jest.mock('src/models/user', () => {
@@ -18,11 +17,6 @@ jest.mock('src/models/user', () => {
 jest.mock('src/models/userStatus', () => {
   return {
     create: jest.fn(),
-  };
-});
-jest.mock('src/models/team', () => {
-  return {
-    get: jest.fn(),
   };
 });
 jest.mock('src/models/userInTeam', () => {
@@ -81,7 +75,6 @@ describe('GET /users/{email}', () => {
     helpers.checkTwoUsersInSameTeam.mockResolvedValue(true);
     UserModel.get.mockResolvedValue({...user});
     UserInTeamModel.get.mockResolvedValue(userInTeam);
-    TeamModel.get.mockResolvedValue({'id': 'team1'});
 
     request(app)
         .get(url)
@@ -93,9 +86,6 @@ describe('GET /users/{email}', () => {
           expect(UserInTeamModel.get)
               .toHaveBeenCalledTimes(1)
               .toHaveBeenCalledWith(user.email);
-          expect(TeamModel.get)
-              .toHaveBeenCalledTimes(1)
-              .toHaveBeenCalledWith('team1');
           done();
         });
   });

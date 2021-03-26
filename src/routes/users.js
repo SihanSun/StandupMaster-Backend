@@ -59,8 +59,7 @@ router.get('/:email', async function(req, res) {
   if (email === requestorEmail) {
     const userInTeam = await UserInTeamModel.get(email);
     if (userInTeam !== undefined) {
-      const team = await TeamModel.get(userInTeam.teamId);
-      user.team = team;
+      user.teamId = userInTeam.teamId;
     }
   }
 
