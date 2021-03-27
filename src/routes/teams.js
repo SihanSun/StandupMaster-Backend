@@ -384,12 +384,6 @@ router.post('/:id/pending_members',
 
       team.pendingMemberEmails.push(email);
 
-      // comfirm pending joining request
-      const i = team.pendingMemberEmails.indexOf(email);
-      if (i!=-1) {
-        team.pendingMemberEmails.splice(i, 1);
-      }
-
       const result = await TeamModel.update(team);
       res.send(result);
     });
