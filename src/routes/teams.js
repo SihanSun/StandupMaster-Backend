@@ -401,7 +401,7 @@ router.post('/:id/pending_members',
  *     tags:
  *       - teams
  *     summary: Remove a pending member to the team
- *     description: Reject a user's request to join the team by owner.
+ *     description: Deny a user's request to join the team by owner or by the user.
  *     parameters:
  *     - name: id
  *       in: path
@@ -437,7 +437,7 @@ router.delete('/:id/pending_members/:email',
         return;
       }
 
-      if (req.headers.authorization.email !== team.ownerEmail) {
+      if (req.headers.authorization.email !== team.ownerEmail && req.headers.authorization.email !== email) {
         res.status('401').send('Not authorized remove pending member from this team');
         return;
       }
