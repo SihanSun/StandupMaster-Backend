@@ -56,6 +56,12 @@ router.get('/:id', async function(req, res) {
   const members = await UserModel.batchGet(team.memberEmails);
   team.members = members;
 
+  team.pendingMembers = [];
+  if (team.pendingMemberEmails.length>0) {
+    const pendingMembers = await UserModel.batchGet(team.pendingMemberEmails);
+    team.pendingMembers = pendingMembers;
+  }
+
   const promises = [];
   for (const member of team.members) {
     const promise = generateSignedUrlForProfilePicture(member.email).then((url) => member.profilePictureUrl = url);
@@ -65,6 +71,7 @@ router.get('/:id', async function(req, res) {
 
   team.owner = members.filter((e) => e.email === team.ownerEmail).pop();
   team.memberEmails = undefined;
+  team.pendingMemberEmails = undefined;
   team.ownerEmail = undefined;
   res.send(team);
 });
@@ -104,6 +111,7 @@ router.post('/',
       req.body.id = uid;
       req.body.memberEmails = [];
       req.body.memberEmails.push(req.body.ownerEmail);
+      req.body.pendingMemberEmails = [];
       req.body.meetings = [];
 
       try {
@@ -176,10 +184,8 @@ router.put('/:id',
  *     tags:
  *       - teams
  *     summary: Add a member to the team
- *     description: The team owner's can add other users to the team. Users can also add themselves to the team using
- *                  invitation code.Note that if the requester provides the code param, the requester is assumed to be
- *                  adding him/herself to a team. If the requester provides the email param, the requester is assumed
- *                  to be the team's owner and adding new member to the team. Only one of the param should be provided.
+ *     description: The team owner's can add other users to the team directly or
+ *                  by confirming the pending request.
  *     parameters:
  *     - name: id
  *       in: path
@@ -193,8 +199,6 @@ router.put('/:id',
  *           schema:
  *             type: object
  *             properties:
- *               code:
- *                 type: string
  *               email:
  *                 type: string
  *     responses:
@@ -212,7 +216,6 @@ router.put('/:id',
  *         description: Team doesn't exist
  */
 router.post('/:id/members',
-    // body('code').exists(),
     body('email').exists(),
     error,
     async function(req, res) {
@@ -224,7 +227,7 @@ router.post('/:id/members',
         return;
       }
 
-      const {code, email} = req.body;
+      const {email} = req.body;
       const user = await UserModel.get(email);
       if (user === undefined) {
         res.status('400').send('User doesn\'t exist');
@@ -236,14 +239,213 @@ router.post('/:id/members',
         return;
       }
 
-      // TODO invite code auth
-
       if (team.memberEmails.includes(email)) {
         res.status('400').send('User already is a member');
         return;
       }
 
       team.memberEmails.push(email);
+
+      // comfirm pending join request
+      const i = team.pendingMemberEmails.indexOf(email);
+      if (i!=-1) {
+        team.pendingMemberEmails.splice(i, 1);
+      }
+
+      const result = await TeamModel.update(team);
+      res.send(result);
+    });
+
+/**
+ * @openapi
+ * /teams/{id}/members/:email:
+ *   delete:
+ *     tags:
+ *       - teams
+ *     summary: Remove member from the team
+ *     description: Remove member from the team by owner
+ *     parameters:
+ *     - name: id
+ *       in: path
+ *       description: team's id
+ *       required: true
+ *       type: string
+ *     - name: email
+ *       in: path
+ *       description: member's email
+ *       required: true
+ *       type: string
+ *     responses:
+ *       200:
+ *         description: Successful operation.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Team'
+ *       400:
+ *         description: Bad request. Request data is invalid
+ *       401:
+ *         description: Not authorized. Requester is not authorized to add member to the team
+ *       404:
+ *         description: Team doesn't exist
+ */
+router.delete('/:id/members/:email',
+    async function(req, res) {
+      const {id, email} = req.params;
+
+      const team = await TeamModel.get(id);
+      if (team === undefined) {
+        res.status('404').send('Team doesn\'t exist');
+        return;
+      }
+
+      if (req.headers.authorization.email !== team.ownerEmail) {
+        res.status('401').send('Not authorized remove member from this team');
+        return;
+      }
+
+      if (!team.memberEmails.includes(email)) {
+        res.status('400').send('User is not a member');
+        return;
+      }
+
+      const i = team.memberEmails.indexOf(email);
+      team.memberEmails.splice(i, 1);
+
+      const result = await TeamModel.update(team);
+      res.send(result);
+    });
+
+/**
+ * @openapi
+ * /teams/{id}/pending_members:
+ *   post:
+ *     tags:
+ *       - teams
+ *     summary: Add a pending member from the team
+ *     description: A user requests to join a team by add himself as a pending member.
+ *     parameters:
+ *     - name: id
+ *       in: path
+ *       description: team's id
+ *       required: true
+ *       type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Successful operation.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Team'
+ *       400:
+ *         description: Bad request. Request data is invalid
+ *       401:
+ *         description: Not authorized. Requester is not authorized to add member to the team
+ *       404:
+ *         description: Team doesn't exist
+ */
+router.post('/:id/pending_members',
+    body('email').exists(),
+    error,
+    async function(req, res) {
+      const id = req.params.id;
+
+      const team = await TeamModel.get(id);
+      if (team === undefined) {
+        res.status('404').send('Team doesn\'t exist');
+        return;
+      }
+
+      const {email} = req.body;
+      if (req.headers.authorization.email !== email) {
+        res.status('401').send('Not authorized add pending member to this team');
+        return;
+      }
+
+      const user = await UserModel.get(email);
+      if (user === undefined) {
+        res.status('400').send('User doesn\'t exist');
+        return;
+      }
+
+      if (team.memberEmails.includes(email) || team.pendingMemberEmails.includes(email)) {
+        res.status('400').send('User already is a member or a pending member');
+        return;
+      }
+
+      team.pendingMemberEmails.push(email);
+
+      const result = await TeamModel.update(team);
+      res.send(result);
+    });
+
+/**
+ * @openapi
+ * /teams/{id}/pending_members/:email:
+ *   delete:
+ *     tags:
+ *       - teams
+ *     summary: Remove a pending member to the team
+ *     description: Deny a user's request to join the team by owner or by the user.
+ *     parameters:
+ *     - name: id
+ *       in: path
+ *       description: team's id
+ *       required: true
+ *       type: string
+ *     - name: email
+ *       in: path
+ *       description: member's email
+ *       required: true
+ *       type: string
+ *     responses:
+ *       200:
+ *         description: Successful operation.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Team'
+ *       400:
+ *         description: Bad request. Request data is invalid
+ *       401:
+ *         description: Not authorized. Requester is not authorized to add member to the team
+ *       404:
+ *         description: Team doesn't exist
+ */
+router.delete('/:id/pending_members/:email',
+    async function(req, res) {
+      const {id, email} = req.params;
+
+      const team = await TeamModel.get(id);
+      if (team === undefined) {
+        res.status('404').send('Team doesn\'t exist');
+        return;
+      }
+
+      if (req.headers.authorization.email !== team.ownerEmail && req.headers.authorization.email !== email) {
+        res.status('401').send('Not authorized remove pending member from this team');
+        return;
+      }
+
+      if (!team.pendingMemberEmails.includes(email)) {
+        res.status('400').send('User is not a pending member');
+        return;
+      }
+
+      const i = team.pendingMemberEmails.indexOf(email);
+      if (i!=-1) {
+        team.pendingMemberEmails.splice(i, 1);
+      }
+
       const result = await TeamModel.update(team);
       res.send(result);
     });

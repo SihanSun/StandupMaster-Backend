@@ -35,6 +35,11 @@ import dynamoose from 'dynamoose';
  *           items:
  *             $ref: '#/components/schemas/User'
  *           readOnly: True
+ *         pendingMembers:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/User'
+ *           readOnly: True
  *         meetings:
  *           type: array
  *           items:
@@ -53,6 +58,10 @@ const teamSchema = {
   profilePictureUrl: String,
   announcement: String,
   memberEmails: {
+    type: Array,
+    schema: [String],
+  },
+  pendingMemberEmails: {
     type: Array,
     schema: [String],
   },
