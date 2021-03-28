@@ -4,6 +4,7 @@ import {body} from 'express-validator';
 
 import TeamModel from '../models/team';
 import UserModel from '../models/user';
+import UserInTeamModel from '../models/userInTeam';
 import {generateSignedUrlForProfilePicture} from '../utils/helpers';
 import {error} from '../utils/middlewares';
 
@@ -107,6 +108,12 @@ router.post('/',
         return;
       }
 
+      let userInTeam = await UserInTeamModel.get(req.body.ownerEmail);
+      if (userInTeam !== undefined) {
+        res.status('400').send('User already in a team');
+        return;
+      }
+
       const uid = uuid.v4();
       req.body.id = uid;
       req.body.memberEmails = [];
@@ -114,11 +121,19 @@ router.post('/',
       req.body.pendingMemberEmails = [];
       req.body.meetings = [];
 
+      userInTeam = {
+        userEmail: req.body.ownerEmail,
+        teamId: uid,
+        pending: false,
+      };
+
       try {
         const team = await TeamModel.create(req.body);
+        await UserInTeamModel.create(userInTeam);
         res.send(team);
       } catch (error) {
         res.status(400).send('Team already exists');
+        return;
       }
     });
 
@@ -244,6 +259,22 @@ router.post('/:id/members',
         return;
       }
 
+      let userInTeam = await UserInTeamModel.get(email);
+      if (userInTeam !== undefined && userInTeam.teamId != id) {
+        res.status('400').send('User already in another team');
+        return;
+      } else if (userInTeam === undefined) {
+        userInTeam = {
+          userEmail: email,
+          teamId: id,
+          pending: false,
+        };
+        await UserInTeamModel.create(userInTeam);
+      } else {
+        userInTeam.pending = false;
+        await UserInTeamModel.update(userInTeam);
+      }
+
       team.memberEmails.push(email);
 
       // comfirm pending join request
@@ -304,10 +335,17 @@ router.delete('/:id/members/:email',
         return;
       }
 
+      if (team.ownerEmail === email) {
+        res.status('400').send('Cannot remove owner');
+        return;
+      }
+
       if (!team.memberEmails.includes(email)) {
         res.status('400').send('User is not a member');
         return;
       }
+
+      await UserInTeamModel.delete(email);
 
       const i = team.memberEmails.indexOf(email);
       team.memberEmails.splice(i, 1);
@@ -382,6 +420,19 @@ router.post('/:id/pending_members',
         return;
       }
 
+      let userInTeam = await UserInTeamModel.get(email);
+      if (userInTeam !== undefined) {
+        res.status('400').send('User already in a team');
+        return;
+      } else {
+        userInTeam = {
+          userEmail: email,
+          teamId: id,
+          pending: true,
+        };
+        await UserInTeamModel.create(userInTeam);
+      }
+
       team.pendingMemberEmails.push(email);
 
       const result = await TeamModel.update(team);
@@ -445,6 +496,8 @@ router.delete('/:id/pending_members/:email',
       if (i!=-1) {
         team.pendingMemberEmails.splice(i, 1);
       }
+
+      await UserInTeamModel.delete(email);
 
       const result = await TeamModel.update(team);
       res.send(result);
@@ -667,6 +720,12 @@ router.delete('/:id',
       }
 
       const result = await TeamModel.delete(id);
+
+      await UserInTeamModel.batchDelete(team.memberEmails);
+      if (team.pendingMemberEmails.length>0) {
+        await UserInTeamModel.batchDelete(team.pendingMemberEmails);
+      }
+
       res.send(result);
     });
 

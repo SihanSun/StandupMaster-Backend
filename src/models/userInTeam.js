@@ -6,6 +6,7 @@ const userInTeamSchema = {
     hashKey: true,
   },
   teamId: String,
+  pending: Boolean,
 };
 
 const UserInTeamModel = dynamoose.model('UserInTeam', userInTeamSchema, {create: false});
