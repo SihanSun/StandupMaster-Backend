@@ -60,6 +60,7 @@ router.get('/:email', async function(req, res) {
     const userInTeam = await UserInTeamModel.get(email);
     if (userInTeam !== undefined) {
       user.teamId = userInTeam.teamId;
+      user.pendingToJoinTeam = userInTeam.pending;
     }
   }
 
