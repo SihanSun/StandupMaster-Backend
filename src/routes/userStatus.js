@@ -82,7 +82,7 @@ router.put('/:email',
     body('isBlocked').exists(),
     body('presentation').exists(),
     body('presentation').custom((value) => {
-      if (value && (!value.prevWork || !value.planToday)) {
+      if (value && (!value.prevWork || !value.planToday || !value.blockedBy)) {
         throw new Error('presentation doesn\'t conform to schema');
       }
       return true;

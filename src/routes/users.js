@@ -110,6 +110,7 @@ router.post('/',
           presentation: {
             prevWork: '',
             planToday: '',
+            blockedBy: '',
           },
         };
         await UserStatus.create(userStatus);
