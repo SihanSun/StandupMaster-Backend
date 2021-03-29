@@ -24,7 +24,10 @@ import dynamoose from 'dynamoose';
  *       required:
  *       - prevWork
  *       - planToday
+ *       - blockedBy
  *       properties:
+ *         blockedBy:
+ *           type: string
  *         prevWork:
  *           type: string
  *         planToday:
@@ -39,6 +42,10 @@ const userStatusSchema = {
   presentation: {
     type: Object,
     schema: {
+      blockedBy: {
+        type: String,
+        required: true,
+      },
       prevWork: {
         type: String,
         required: true,

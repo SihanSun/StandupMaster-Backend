@@ -72,7 +72,7 @@ router.get('/:id', async function(req, res) {
     const promise = generateSignedUrlForProfilePicture(member.email).then((url) => member.profilePictureUrl = url);
     promises.push(promise);
   }
-  team.profilePictureUrl = await generateSignedUrlForProfilePicture(teamId);
+  team.profilePictureUrl = await generateSignedUrlForProfilePicture(req.params.id);
   await Promise.all(promises);
 
   team.owner = members.filter((e) => e.email === team.ownerEmail).pop();
