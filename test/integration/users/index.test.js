@@ -29,6 +29,7 @@ jest.mock('src/utils/helpers', () => {
     checkTwoUsersInSameTeam: jest.fn(),
     generateSignedUrlForProfilePicture: jest.fn(),
     uploadProfilePicture: jest.fn(),
+    setDefaultProfilePicture: jest.fn(),
   };
 });
 

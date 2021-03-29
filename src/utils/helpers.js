@@ -27,19 +27,28 @@ const checkTwoUsersInSameTeam = async (userEmail1, userEmail2) => {
   return true;
 };
 
-const generateSignedUrlForProfilePicture = async (email) => {
+const generateSignedUrlForProfilePicture = async (path) => {
   const url = await s3.getSignedUrl('getObject', {
     Bucket: bucket,
-    Key: `profile-pictures/${email}/picture`,
+    Key: `profile-pictures/${path}/picture`,
     Expires: 24 * 60 * 60,
   });
   return url;
 };
 
-const uploadProfilePicture = async (email, picture) => {
+const setDefaultProfilePicture = async (path, isTeam) => {
+  const CopySource = `/${bucket}/default-${isTeam && 'team-'}profile-picture`;
+  await s3.copyObject({
+    Bucket: bucket,
+    CopySource,
+    Key: `profile-pictures/${path}/picture`,
+  }).promise();
+};
+
+const uploadProfilePicture = async (path, picture) => {
   await s3.putObject({
     Bucket: bucket,
-    Key: `profile-pictures/${email}/picture`,
+    Key: `profile-pictures/${path}/picture`,
     Body: picture,
   }).promise();
 };
@@ -47,5 +56,6 @@ const uploadProfilePicture = async (email, picture) => {
 export {
   checkTwoUsersInSameTeam,
   generateSignedUrlForProfilePicture,
+  setDefaultProfilePicture,
   uploadProfilePicture,
 };
