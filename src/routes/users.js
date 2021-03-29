@@ -6,10 +6,10 @@ import {
   checkTwoUsersInSameTeam,
   generateSignedUrlForProfilePicture,
   uploadProfilePicture,
+  setDefaultProfilePicture,
 } from '../utils/helpers';
 import UserModel from '../models/user';
 import UserStatus from '../models/userStatus';
-import TeamModel from '../models/team';
 import UserInTeamModel from '../models/userInTeam';
 
 const router = new express.Router();
@@ -27,7 +27,12 @@ const router = new express.Router();
  *   get:
  *     tags:
  *     - users
- *     summary: Get user by id. If the requestor is querying for him/herself, team info will be included in the result
+ *     summary: Get user by id.
+ *     description: |
+ *       If the requestor is querying for him/herself, there are three different cases.
+ *         1. response contains teamId: user is added to this team
+ *         2. response contains teamId but pending is true: user is pending to join this team
+ *         3. response doesn't contain teamId: user is not in any team
  *     parameters:
  *     - name: email
  *       in: path
@@ -108,6 +113,7 @@ router.post('/',
           },
         };
         await UserStatus.create(userStatus);
+        await setDefaultProfilePicture(user.email, false);
 
         res.send(user);
       } catch (error) {

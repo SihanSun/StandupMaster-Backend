@@ -5,7 +5,11 @@ import {body} from 'express-validator';
 import TeamModel from '../models/team';
 import UserModel from '../models/user';
 import UserInTeamModel from '../models/userInTeam';
-import {generateSignedUrlForProfilePicture} from '../utils/helpers';
+import {
+  generateSignedUrlForProfilePicture,
+  uploadProfilePicture,
+  setDefaultProfilePicture,
+} from '../utils/helpers';
 import {error} from '../utils/middlewares';
 
 const router = new express.Router();
@@ -68,6 +72,7 @@ router.get('/:id', async function(req, res) {
     const promise = generateSignedUrlForProfilePicture(member.email).then((url) => member.profilePictureUrl = url);
     promises.push(promise);
   }
+  team.profilePictureUrl = await generateSignedUrlForProfilePicture(teamId);
   await Promise.all(promises);
 
   team.owner = members.filter((e) => e.email === team.ownerEmail).pop();
@@ -130,6 +135,7 @@ router.post('/',
       try {
         const team = await TeamModel.create(req.body);
         await UserInTeamModel.create(userInTeam);
+        await setDefaultProfilePicture(uid, true);
         res.send(team);
       } catch (error) {
         res.status(400).send('Team already exists');
@@ -187,6 +193,11 @@ router.put('/:id',
 
       const params = req.body;
       params.id = id;
+
+      if (params.profilePicture !== undefined) {
+        await uploadProfilePicture(id, params.profilePicture);
+        delete params.profilePicture;
+      }
 
       const result = await TeamModel.update(params);
       res.send(result);
