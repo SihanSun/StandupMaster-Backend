@@ -341,7 +341,7 @@ router.delete('/:id/members/:email',
         return;
       }
 
-      if (req.headers.authorization.email !== team.ownerEmail) {
+      if (req.headers.authorization.email !== team.ownerEmail && req.headers.authorization.email !== email) {
         res.status('401').send('Not authorized remove member from this team');
         return;
       }
