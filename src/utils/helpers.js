@@ -37,7 +37,7 @@ const generateSignedUrlForProfilePicture = async (path) => {
 };
 
 const setDefaultProfilePicture = async (path, isTeam) => {
-  const CopySource = `/${bucket}/default-${isTeam && 'team-'}profile-picture`;
+  const CopySource = `/${bucket}/default-${isTeam ? 'team-' : ''}profile-picture`;
   await s3.copyObject({
     Bucket: bucket,
     CopySource,
