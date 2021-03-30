@@ -16,8 +16,9 @@ import dynamoose from 'dynamoose';
  *         name:
  *           type: string
  *         owner:
- *           $ref: '#/components/schemas/User'
  *           readOnly: true
+ *           allOf:
+ *           -  $ref: '#/components/schemas/User'
  *         ownerEmail:
  *           type: string
  *           writeOnly: true

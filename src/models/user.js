@@ -31,6 +31,7 @@ import dynamoose from 'dynamoose';
  *           example: "Brown"
  *         teamId:
  *           type: string
+ *           readOnly: true
 */
 
 const userSchema = {
