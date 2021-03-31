@@ -45,7 +45,8 @@ const setDefaultProfilePicture = async (path, isTeam) => {
   }).promise();
 };
 
-const uploadProfilePicture = async (path, picture) => {
+const uploadProfilePicture = async (path, pictureInBase64) => {
+  const picture = Buffer.from(pictureInBase64, 'base64');
   await s3.putObject({
     Bucket: bucket,
     Key: `profile-pictures/${path}/picture`,

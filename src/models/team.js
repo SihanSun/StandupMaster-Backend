@@ -27,7 +27,7 @@ import dynamoose from 'dynamoose';
  *           readOnly: true
  *         profilePicture:
  *           type: string
- *           format: binary
+ *           format: base64
  *           writeOnly: true
  *         announcement:
  *           type: string

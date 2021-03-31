@@ -11,7 +11,7 @@ import teams from './routes/teams';
 const app = express();
 
 // middlewares
-app.use(express.json());
+app.use(express.json({limit: '10mb'}));
 app.use(decodeAuthToken);
 app.use(cors());
 
