@@ -29,6 +29,7 @@ const userStatus = {
   presentation: {
     prevWork: 'task1',
     planToday: 'task2',
+    blockedBy: 'task3',
   },
 };
 const token = 'Bearer ' + jwtEncode({email: userStatus.email}, 'secret');

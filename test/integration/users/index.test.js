@@ -87,11 +87,34 @@ describe('GET /users/{email}', () => {
           expect(UserInTeamModel.get)
               .toHaveBeenCalledTimes(1)
               .toHaveBeenCalledWith(user.email);
+          expect(response.body.teamId)
+              .toEqual('team1');
           done();
         });
   });
 
-  it('should notreturn with team info if requestor is not the same as user email', (done) => {
+  it('should return with team info if requestor is same as user email', (done) => {
+    helpers.checkTwoUsersInSameTeam.mockResolvedValue(true);
+    UserModel.get.mockResolvedValue({...user});
+    UserInTeamModel.get.mockResolvedValue(undefined);
+
+    request(app)
+        .get(url)
+        .set('Authorization', token)
+        .then((response) => {
+          expect(UserModel.get)
+              .toHaveBeenCalledTimes(1)
+              .toHaveBeenCalledWith(user.email);
+          expect(UserInTeamModel.get)
+              .toHaveBeenCalledTimes(1)
+              .toHaveBeenCalledWith(user.email);
+          expect(response.body.teamId)
+              .toEqual(undefined)
+          done();
+        });
+  });
+
+  it('should not return with team info if requestor is not the same as user email', (done) => {
     helpers.checkTwoUsersInSameTeam.mockResolvedValue(true);
     UserModel.get.mockResolvedValue({...user});
 
@@ -150,6 +173,40 @@ describe('PUT /users/{email}', () => {
         });
   });
 
+  it('should work without profile picture', (done) => {
+    const oldUser = {
+      email: 'cs439@yale.edu',
+      displayName: 'StandupBeginner',
+      firstName: 'Standup',
+      lastName: 'Beginner',
+    };
+    const body = {
+      displayName: user.displayName,
+      firstName: user.firstName,
+      lastName: user.lastName,
+    };
+
+    UserModel.get.mockResolvedValue(oldUser);
+    UserModel.update.mockResolvedValue(user);
+
+    request(app)
+        .put(url)
+        .send(body)
+        .set('Authorization', token)
+        .expect(200)
+        .then((response) => {
+          expect(UserModel.get)
+              .toHaveBeenCalledTimes(1)
+              .toHaveBeenCalledWith(user.email);
+          expect(UserModel.update)
+              .toHaveBeenCalledTimes(1)
+              .toHaveBeenCalledWith(user);
+          expect(response.body)
+              .toEqual(user);
+          done();
+        });
+  });
+
   it('should work', (done) => {
     const oldUser = {
       email: 'cs439@yale.edu',
@@ -181,6 +238,9 @@ describe('PUT /users/{email}', () => {
               .toHaveBeenCalledWith(user);
           expect(response.body)
               .toEqual(user);
+          expect(helpers.uploadProfilePicture)
+              .toHaveBeenCalledTimes(1)
+              .toHaveBeenCalledWith(user.email, 'picture');
           done();
         });
   });
@@ -256,7 +316,7 @@ describe('POST /users/{email}', () => {
               .toHaveBeenCalledWith({
                 email: user.email,
                 isBlocked: false,
-                presentation: {prevWork: '', planToday: ''},
+                presentation: {prevWork: '', planToday: '', blockedBy: ''},
               });
           expect(response.body)
               .toEqual(user);
