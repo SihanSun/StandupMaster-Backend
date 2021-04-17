@@ -487,3 +487,246 @@ describe('POST /teams/{id}/members', () => {
         });
   });
 });
+
+describe('POST /teams/{id}/meetings', () => {
+  const url = `/teams/${team.id}/meetings`;
+  const meeting = {
+    name: 'standup',
+    description: 'share your work',
+    weekdayTime: ['9am']
+  }
+  const teamWithMeetings = {
+    id: 'team1',
+    name: 'team1',
+    ownerEmail: owner.email,
+    meetings: [],
+  };
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('should return 404 if team doesn\'t exist', (done) => {
+    TeamModel.get.mockResolvedValue(undefined);
+
+    const body = {
+      ...meeting
+    };
+
+    request(app)
+        .post(url)
+        .set('Authorization', outSiderToken)
+        .send(body)
+        .expect(404)
+        .then((response) => {
+          expect(TeamModel.get)
+              .toHaveBeenCalledTimes(1);
+          done();
+        });
+  });
+
+  it('should return 401 if requestor is not owner', (done) => {
+    TeamModel.get.mockResolvedValue(teamWithMeetings);
+
+    const body = { ...meeting };
+
+    request(app)
+        .post(url)
+        .set('Authorization', outSiderToken)
+        .send(body)
+        .expect(401)
+        .then((response) => {
+          expect(TeamModel.get)
+              .toHaveBeenCalledTimes(1);
+          done();
+        });
+  });
+
+  it('should return 400 if meeting name already exist', (done) => {
+    TeamModel.get.mockResolvedValue({...teamWithMeetings, meetings: [meeting]});
+
+    const body = { ...meeting };
+
+    request(app)
+        .post(url)
+        .set('Authorization', ownerToken)
+        .send(body)
+        .expect(400)
+        .then((response) => {
+          expect(TeamModel.get)
+              .toHaveBeenCalledTimes(1);
+          done();
+        });
+  });
+
+  it('should work', (done) => {
+    TeamModel.get.mockResolvedValue({...teamWithMeetings});
+
+    const body = { ...meeting };
+
+    request(app)
+        .post(url)
+        .set('Authorization', ownerToken)
+        .send(body)
+        .expect(200)
+        .then((response) => {
+          expect(TeamModel.get)
+              .toHaveBeenCalledTimes(1);
+          expect(TeamModel.update)
+              .toHaveBeenCalledTimes(1);
+          expect(response.body.meetings)
+              .toEqual([meeting]);
+          done();
+        });
+  });
+})
+
+describe('DELETE /teams/{id}/meetings/{meetingName}', () => {
+  const meeting = {
+    name: 'standup',
+    description: 'share your work',
+    weekdayTime: ['9am']
+  }
+  const url = `/teams/${team.id}/meetings/${meeting.name}`;
+  const teamWithMeetings = {
+    id: 'team1',
+    name: 'team1',
+    ownerEmail: owner.email,
+    meetings: [],
+  };
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('should return 404 if team doesn\'t exist', (done) => {
+    TeamModel.get.mockResolvedValue(undefined);
+
+    request(app)
+        .delete(url)
+        .set('Authorization', outSiderToken)
+        .expect(404)
+        .then((response) => {
+          expect(TeamModel.get)
+              .toHaveBeenCalledTimes(1);
+          done();
+        });
+  });
+
+  it('should return 401 if requestor is not owner', (done) => {
+    TeamModel.get.mockResolvedValue(teamWithMeetings);
+
+    request(app)
+        .delete(url)
+        .set('Authorization', outSiderToken)
+        .expect(401)
+        .then((response) => {
+          expect(TeamModel.get)
+              .toHaveBeenCalledTimes(1);
+          done();
+        });
+  });
+
+  it('should return 404 if meeting doesn\'t exist', (done) => {
+    TeamModel.get.mockResolvedValue({...teamWithMeetings});
+
+    request(app)
+        .delete(url)
+        .set('Authorization', ownerToken)
+        .expect(404)
+        .then((response) => {
+          expect(TeamModel.get)
+              .toHaveBeenCalledTimes(1);
+          done();
+        });
+  });
+
+  it('should work', (done) => {
+    TeamModel.get.mockResolvedValue({...teamWithMeetings, meetings: [meeting]});
+
+    request(app)
+        .delete(url)
+        .set('Authorization', ownerToken)
+        .expect(200)
+        .then((response) => {
+          expect(TeamModel.get)
+              .toHaveBeenCalledTimes(1);
+          expect(TeamModel.update)
+              .toHaveBeenCalledTimes(1);
+          expect(response.body.meetings)
+              .toEqual([]);
+          done();
+        });
+  });
+})
+
+describe('DELETE /teams/{id}', () => {
+  const url = `/teams/${team.id}`;
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('should return 404 if team doesn\'t exist', (done) => {
+    TeamModel.get.mockResolvedValue(undefined);
+
+    request(app)
+        .delete(url)
+        .set('Authorization', outSiderToken)
+        .expect(404)
+        .then((response) => {
+          expect(TeamModel.get)
+              .toHaveBeenCalledTimes(1);
+          done();
+        });
+  });
+
+  it('should return 401 if requestor is not owner', (done) => {
+    TeamModel.get.mockResolvedValue({...team});
+
+    request(app)
+        .delete(url)
+        .set('Authorization', outSiderToken)
+        .expect(401)
+        .then((response) => {
+          expect(TeamModel.get)
+              .toHaveBeenCalledTimes(1);
+          done();
+        });
+  });
+
+  it('should work with no pendingMemberEmails', (done) => {
+    TeamModel.get.mockResolvedValue({...team});
+
+    request(app)
+        .delete(url)
+        .set('Authorization', ownerToken)
+        .expect(200)
+        .then((response) => {
+          expect(TeamModel.get)
+              .toHaveBeenCalledTimes(1);
+          expect(TeamModel.delete)
+              .toHaveBeenCalledTimes(1);
+          expect(UserInTeamModel.batchDelete)
+              .toHaveBeenCalledTimes(1);
+          done();
+        });
+  });
+
+  it('should work', (done) => {
+    TeamModel.get.mockResolvedValue({...team, pendingMemberEmails: ['user1@yale.edu']});
+
+    request(app)
+        .delete(url)
+        .set('Authorization', ownerToken)
+        .expect(200)
+        .then((response) => {
+          expect(TeamModel.get)
+              .toHaveBeenCalledTimes(1);
+          expect(TeamModel.delete)
+              .toHaveBeenCalledTimes(1);
+          expect(UserInTeamModel.batchDelete)
+              .toHaveBeenCalledTimes(2);
+          done();
+        });
+  });
+})
