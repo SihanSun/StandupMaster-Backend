@@ -11,27 +11,30 @@ import TeamModel from 'src/models/team';
 jest.mock('src/models/user', () => {
   return {
     get: jest.fn(),
-    create: jest.fn(),
-    update: jest.fn(),
+    create: jest.fn((e) => e),
+    update: jest.fn((e) => e),
     batchGet: jest.fn(),
   };
 });
 jest.mock('src/models/userStatus', () => {
   return {
-    create: jest.fn(),
+    create: jest.fn((e) => e),
   };
 });
 jest.mock('src/models/userInTeam', () => {
   return {
     get: jest.fn(),
-    create: jest.fn(),
+    create: jest.fn((e) => e),
+    update: jest.fn((e) => e),
+    batchDelete: jest.fn(),
   };
 });
 jest.mock('src/models/team', () => {
   return {
     get: jest.fn(),
-    create: jest.fn(),
-    update: jest.fn(),
+    create: jest.fn((e) => e),
+    update: jest.fn((e) => e),
+    delete: jest.fn(),
   };
 });
 jest.mock('src/utils/helpers', () => {
@@ -189,8 +192,6 @@ describe('POST /teams', () => {
   });
 
   it('should return 400 if team already exists', (done) => {
-    TeamModel.create.mockResolvedValue({...team});
-    UserInTeamModel.create.mockResolvedValue(userInTeam);
     UserInTeamModel.get.mockResolvedValue(undefined);
     UserInTeamModel.create.mockRejectedValue(undefined);
 
@@ -203,12 +204,14 @@ describe('POST /teams', () => {
         .post(url)
         .set('Authorization', ownerToken)
         .send(body)
-        .expect(400, done);
+        .expect(400)
+        .then(() => {
+          UserInTeamModel.create = jest.fn((e) => e);
+          done();
+        });
   });
 
   it('should create the team', (done) => {
-    TeamModel.create.mockResolvedValue({...team});
-    UserInTeamModel.create.mockResolvedValue(userInTeam);
     UserInTeamModel.get.mockResolvedValue(undefined);
 
     const body = {
@@ -286,7 +289,6 @@ describe('PUT /teams/{id}', () => {
 
   it('should update the team', (done) => {
     TeamModel.get.mockResolvedValue(team);
-    TeamModel.update.mockResolvedValue(teamNew);
 
     const body = {
       name: teamNew.name,
@@ -309,7 +311,6 @@ describe('PUT /teams/{id}', () => {
 
   it('should update the team with picture', (done) => {
     TeamModel.get.mockResolvedValue(team);
-    TeamModel.update.mockResolvedValue(teamNew);
     helpers.uploadProfilePicture.mockResolvedValue();
 
     const body = {
@@ -328,6 +329,160 @@ describe('PUT /teams/{id}', () => {
               .toHaveBeenCalledTimes(1);
           expect(response.body.name)
               .toEqual(teamNew.name);
+          done();
+        });
+  });
+});
+
+describe('POST /teams/{id}/members', () => {
+  const url = `/teams/${team.id}/members`;
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('should return 404 if the team doesn\'t exists', (done) => {
+    TeamModel.get.mockResolvedValue(undefined);
+    const body = {
+      email: member.email,
+    };
+
+    request(app)
+        .post(url)
+        .set('Authorization', ownerToken)
+        .send(body)
+        .expect(404, done);
+  });
+
+  it('should return 400 if user does not exist', (done) => {
+    TeamModel.get.mockResolvedValue({...team});
+    UserModel.get.mockResolvedValue(undefined);
+
+    const body = {
+      email: member.email,
+    };
+
+    request(app)
+        .post(url)
+        .set('Authorization', ownerToken)
+        .send(body)
+        .expect(400, done);
+  });
+
+
+  it('should return 401 if bad token', (done) => {
+    TeamModel.get.mockResolvedValue({...team});
+    UserModel.get.mockResolvedValue(member);
+
+    const body = {
+      email: member.email,
+    };
+
+    request(app)
+        .post(url)
+        .set('Authorization', outSiderToken)
+        .send(body)
+        .expect(401, done);
+  });
+
+  it('should return 400 if user already in this team', (done) => {
+    TeamModel.get.mockResolvedValue({...team});
+    UserInTeamModel.get.mockResolvedValue(undefined);
+    UserModel.get.mockResolvedValue(owner);
+
+    const body = {
+      email: owner.email,
+    };
+
+    request(app)
+        .post(url)
+        .set('Authorization', ownerToken)
+        .send(body)
+        .expect(400, done);
+  });
+
+  it('should return 400 if user already in another team', (done) => {
+    const memberInTeam = {
+      userEmail: member.email,
+      teamId: 'team2',
+      pending: false,
+    };
+
+    TeamModel.get.mockResolvedValue({...team});
+    UserInTeamModel.get.mockResolvedValue(memberInTeam);
+    UserModel.get.mockResolvedValue(member);
+
+    const body = {
+      email: member.email,
+    };
+
+    request(app)
+        .post(url)
+        .set('Authorization', ownerToken)
+        .send(body)
+        .expect(400, done);
+  });
+
+  it('should add the team member', (done) => {
+    UserModel.get.mockResolvedValue(member);
+    TeamModel.get.mockResolvedValue({...team});
+    UserInTeamModel.get.mockResolvedValue(undefined);
+
+    const body = {
+      email: member.email,
+    };
+
+    request(app)
+        .post(url)
+        .set('Authorization', ownerToken)
+        .send(body)
+        .expect(200)
+        .then((response) => {
+          expect(UserInTeamModel.create)
+              .toHaveBeenCalledTimes(1);
+          expect(TeamModel.update)
+              .toHaveBeenCalledTimes(1);
+          expect(response.body.memberEmails)
+              .toContain(member.email);
+          expect(response.body.pendingMemberEmails)
+              .not.toContain(member.email);
+          done();
+        });
+  });
+
+  it('should add the team member and remove it from pending', (done) => {
+    const teamWPending = {
+      id: 'team1',
+      name: 'team1',
+      ownerEmail: owner.email,
+      memberEmails: [owner.email],
+      pendingMemberEmails: [member.email],
+    };
+    const memberInTeam = {
+      userEmail: member.email,
+      teamId: team.id,
+      pending: true,
+    };
+    UserModel.get.mockResolvedValue(member);
+    TeamModel.get.mockResolvedValue({...teamWPending});
+    UserInTeamModel.get.mockResolvedValue(memberInTeam);
+
+    const body = {
+      email: member.email,
+    };
+
+    request(app)
+        .post(url)
+        .set('Authorization', ownerToken)
+        .send(body)
+        .expect(200)
+        .then((response) => {
+          expect(UserInTeamModel.update)
+              .toHaveBeenCalledTimes(1);
+          expect(TeamModel.update)
+              .toHaveBeenCalledTimes(1);
+          expect(response.body.memberEmails)
+              .toContain(member.email);
           done();
         });
   });
