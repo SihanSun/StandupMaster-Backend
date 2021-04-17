@@ -26,6 +26,7 @@ jest.mock('src/models/userInTeam', () => {
     get: jest.fn(),
     create: jest.fn((e) => e),
     update: jest.fn((e) => e),
+    delete: jest.fn(),
     batchDelete: jest.fn(),
   };
 });
@@ -444,8 +445,6 @@ describe('POST /teams/{id}/members', () => {
               .toHaveBeenCalledTimes(1);
           expect(response.body.memberEmails)
               .toContain(member.email);
-          expect(response.body.pendingMemberEmails)
-              .not.toContain(member.email);
           done();
         });
   });
@@ -483,18 +482,391 @@ describe('POST /teams/{id}/members', () => {
               .toHaveBeenCalledTimes(1);
           expect(response.body.memberEmails)
               .toContain(member.email);
+          expect(response.body.pendingMemberEmails)
+              .not.toContain(member.email);
           done();
         });
   });
 });
+
+
+describe('DELETE /teams/{id}/members/{email}', () => {
+  const url = `/teams/${team.id}/members/${member.email}`;
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('should return 404 if team doesn\'t exist', (done) => {
+    TeamModel.get.mockResolvedValue(undefined);
+
+    request(app)
+        .delete(url)
+        .set('Authorization', outSiderToken)
+        .expect(404)
+        .then((response) => {
+          expect(TeamModel.get)
+              .toHaveBeenCalledTimes(1);
+          done();
+        });
+  });
+
+  it('should return 401 if requestor is not owner nor member to be removed', (done) => {
+    TeamModel.get.mockResolvedValue({...team});
+
+    request(app)
+        .delete(url)
+        .set('Authorization', outSiderToken)
+        .expect(401)
+        .then((response) => {
+          expect(TeamModel.get)
+              .toHaveBeenCalledTimes(1);
+          done();
+        });
+  });
+
+  it('should return 400 if trying to remove owner', (done) => {
+    TeamModel.get.mockResolvedValue({...team});
+
+    request(app)
+        .delete(`/teams/${team.id}/members/${owner.email}`)
+        .set('Authorization', ownerToken)
+        .expect(400)
+        .then((response) => {
+          expect(TeamModel.get)
+              .toHaveBeenCalledTimes(1);
+          done();
+        });
+  });
+
+  it('should return 400 if member is not in the team', (done) => {
+    TeamModel.get.mockResolvedValue({...team});
+
+    request(app)
+        .delete(`/teams/${team.id}/members/${outSider.email}`)
+        .set('Authorization', ownerToken)
+        .expect(400)
+        .then((response) => {
+          expect(TeamModel.get)
+              .toHaveBeenCalledTimes(1);
+          done();
+        });
+  });
+
+  it('should work', (done) => {
+    TeamModel.get.mockResolvedValue({...team, memberEmails: [member.email, 'user1@yale.edu']});
+
+    request(app)
+        .delete(url)
+        .set('Authorization', ownerToken)
+        .expect(200)
+        .then((response) => {
+          expect(TeamModel.get)
+              .toHaveBeenCalledTimes(1);
+          expect(UserInTeamModel.delete)
+              .toHaveBeenCalledTimes(1);
+          expect(response.body.memberEmails)
+              .toEqual(['user1@yale.edu']);
+          done();
+        });
+  });
+});
+
+describe('POST /teams/{id}/pending_members', () => {
+  const url = `/teams/${team.id}/pending_members`;
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('should return 404 if the team doesn\'t exists', (done) => {
+    TeamModel.get.mockResolvedValue(undefined);
+    const body = {
+      email: member.email,
+    };
+
+    request(app)
+        .post(url)
+        .set('Authorization', memberToken)
+        .send(body)
+        .expect(404, done);
+  });
+
+  it('should return 400 if user does not exist', (done) => {
+    TeamModel.get.mockResolvedValue({...team});
+    UserModel.get.mockResolvedValue(undefined);
+
+    const body = {
+      email: member.email,
+    };
+
+    request(app)
+        .post(url)
+        .set('Authorization', memberToken)
+        .send(body)
+        .expect(400, done);
+  });
+
+
+  it('should return 401 if bad token', (done) => {
+    TeamModel.get.mockResolvedValue({...team});
+    UserModel.get.mockResolvedValue(member);
+
+    const body = {
+      email: member.email,
+    };
+
+    request(app)
+        .post(url)
+        .set('Authorization', outSiderToken)
+        .send(body)
+        .expect(401, done);
+  });
+
+  it('should return 400 if user already in this team', (done) => {
+    const teamWMember = {
+      id: 'team1',
+      name: 'team1',
+      ownerEmail: owner.email,
+      memberEmails: [owner.email, member.email],
+      pendingMemberEmails: [],
+    };
+    TeamModel.get.mockResolvedValue({...teamWMember});
+    UserInTeamModel.get.mockResolvedValue(undefined);
+    UserModel.get.mockResolvedValue(member);
+
+    const body = {
+      email: member.email,
+    };
+
+    request(app)
+        .post(url)
+        .set('Authorization', memberToken)
+        .send(body)
+        .expect(400, done);
+  });
+
+  it('should return 400 if user already pending', (done) => {
+    const teamWMember = {
+      id: 'team1',
+      name: 'team1',
+      ownerEmail: owner.email,
+      memberEmails: [owner.email],
+      pendingMemberEmails: [member.email],
+    };
+    TeamModel.get.mockResolvedValue({...teamWMember});
+    UserInTeamModel.get.mockResolvedValue(undefined);
+    UserModel.get.mockResolvedValue(member);
+
+    const body = {
+      email: member.email,
+    };
+
+    request(app)
+        .post(url)
+        .set('Authorization', memberToken)
+        .send(body)
+        .expect(400, done);
+  });
+
+  it('should return 400 if user already in another team', (done) => {
+    const teamWOMember = {
+      id: 'team1',
+      name: 'team1',
+      ownerEmail: owner.email,
+      memberEmails: [owner.email],
+      pendingMemberEmails: [],
+    };
+
+    const memberInTeam = {
+      userEmail: member.email,
+      teamId: 'team2',
+      pending: false,
+    };
+
+    TeamModel.get.mockResolvedValue({...teamWOMember});
+    UserInTeamModel.get.mockResolvedValue(memberInTeam);
+    UserModel.get.mockResolvedValue(member);
+
+    const body = {
+      email: member.email,
+    };
+
+    request(app)
+        .post(url)
+        .set('Authorization', memberToken)
+        .send(body)
+        .expect(400, done);
+  });
+
+  it('should add the team member as pending', (done) => {
+    const teamWOMember = {
+      id: 'team1',
+      name: 'team1',
+      ownerEmail: owner.email,
+      memberEmails: [owner.email],
+      pendingMemberEmails: [],
+    };
+    UserModel.get.mockResolvedValue(member);
+    TeamModel.get.mockResolvedValue({...teamWOMember});
+    UserInTeamModel.get.mockResolvedValue(undefined);
+
+    const body = {
+      email: member.email,
+    };
+
+    request(app)
+        .post(url)
+        .set('Authorization', memberToken)
+        .send(body)
+        .expect(200)
+        .then((response) => {
+          expect(UserInTeamModel.create)
+              .toHaveBeenCalledTimes(1);
+          expect(TeamModel.update)
+              .toHaveBeenCalledTimes(1);
+          expect(response.body.pendingMemberEmails)
+              .toContain(member.email);
+          done();
+        });
+  });
+});
+
+
+describe('DELETE /teams/{id}/pending_members/{email}', () => {
+  const url = `/teams/${team.id}/pending_members/${member.email}`;
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('should return 404 if team doesn\'t exist', (done) => {
+    TeamModel.get.mockResolvedValue(undefined);
+
+    request(app)
+        .delete(url)
+        .set('Authorization', outSiderToken)
+        .expect(404)
+        .then((response) => {
+          expect(TeamModel.get)
+              .toHaveBeenCalledTimes(1);
+          done();
+        });
+  });
+
+  it('should return 401 if requestor is not owner nor pending member to be removed', (done) => {
+    TeamModel.get.mockResolvedValue({...team});
+
+    request(app)
+        .delete(url)
+        .set('Authorization', outSiderToken)
+        .expect(401)
+        .then((response) => {
+          expect(TeamModel.get)
+              .toHaveBeenCalledTimes(1);
+          done();
+        });
+  });
+
+  it('should return 400 if member is not a pending member', (done) => {
+    TeamModel.get.mockResolvedValue({...team});
+
+    request(app)
+        .delete(url)
+        .set('Authorization', ownerToken)
+        .expect(400)
+        .then((response) => {
+          expect(TeamModel.get)
+              .toHaveBeenCalledTimes(1);
+          done();
+        });
+  });
+
+  it('should work', (done) => {
+    TeamModel.get.mockResolvedValue({...team, pendingMemberEmails: [member.email]});
+
+    request(app)
+        .delete(url)
+        .set('Authorization', ownerToken)
+        .expect(200)
+        .then((response) => {
+          expect(TeamModel.get)
+              .toHaveBeenCalledTimes(1);
+          expect(UserInTeamModel.delete)
+              .toHaveBeenCalledTimes(1);
+          expect(response.body.pendingMemberEmails)
+              .toEqual([]);
+          done();
+        });
+  });
+});
+
+
+describe('PUT /teams/{id}/announcement', () => {
+  const url = `/teams/${team.id}/announcement`;
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('should return 404 if team doesn\'t exist', (done) => {
+    TeamModel.get.mockResolvedValue(undefined);
+
+    request(app)
+        .put(url)
+        .set('Authorization', outSiderToken)
+        .send({...team, announcement: 'no meeting today'})
+        .expect(404)
+        .then((response) => {
+          expect(TeamModel.get)
+              .toHaveBeenCalledTimes(1);
+          done();
+        });
+  });
+
+  it('should return 401 if requestor is not owner', (done) => {
+    TeamModel.get.mockResolvedValue({...team});
+
+    request(app)
+        .put(url)
+        .set('Authorization', outSiderToken)
+        .send({...team, announcement: 'no meeting today'})
+        .expect(401)
+        .then((response) => {
+          expect(TeamModel.get)
+              .toHaveBeenCalledTimes(1);
+          done();
+        });
+  });
+
+  it('should work', (done) => {
+    TeamModel.get.mockResolvedValue({...team});
+
+    request(app)
+        .put(url)
+        .set('Authorization', ownerToken)
+        .send({...team, announcement: 'no meeting today'})
+        .expect(200)
+        .then((response) => {
+          expect(TeamModel.get)
+              .toHaveBeenCalledTimes(1);
+          expect(TeamModel.update)
+              .toHaveBeenCalledTimes(1);
+          expect(response.body.announcement)
+              .toEqual('no meeting today');
+          done();
+        });
+  });
+});
+
 
 describe('POST /teams/{id}/meetings', () => {
   const url = `/teams/${team.id}/meetings`;
   const meeting = {
     name: 'standup',
     description: 'share your work',
-    weekdayTime: ['9am']
-  }
+    weekdayTime: ['9am'],
+  };
   const teamWithMeetings = {
     id: 'team1',
     name: 'team1',
@@ -510,7 +882,7 @@ describe('POST /teams/{id}/meetings', () => {
     TeamModel.get.mockResolvedValue(undefined);
 
     const body = {
-      ...meeting
+      ...meeting,
     };
 
     request(app)
@@ -528,7 +900,7 @@ describe('POST /teams/{id}/meetings', () => {
   it('should return 401 if requestor is not owner', (done) => {
     TeamModel.get.mockResolvedValue(teamWithMeetings);
 
-    const body = { ...meeting };
+    const body = {...meeting};
 
     request(app)
         .post(url)
@@ -545,7 +917,7 @@ describe('POST /teams/{id}/meetings', () => {
   it('should return 400 if meeting name already exist', (done) => {
     TeamModel.get.mockResolvedValue({...teamWithMeetings, meetings: [meeting]});
 
-    const body = { ...meeting };
+    const body = {...meeting};
 
     request(app)
         .post(url)
@@ -562,7 +934,7 @@ describe('POST /teams/{id}/meetings', () => {
   it('should work', (done) => {
     TeamModel.get.mockResolvedValue({...teamWithMeetings});
 
-    const body = { ...meeting };
+    const body = {...meeting};
 
     request(app)
         .post(url)
@@ -579,14 +951,14 @@ describe('POST /teams/{id}/meetings', () => {
           done();
         });
   });
-})
+});
 
 describe('DELETE /teams/{id}/meetings/{meetingName}', () => {
   const meeting = {
     name: 'standup',
     description: 'share your work',
-    weekdayTime: ['9am']
-  }
+    weekdayTime: ['9am'],
+  };
   const url = `/teams/${team.id}/meetings/${meeting.name}`;
   const teamWithMeetings = {
     id: 'team1',
@@ -658,7 +1030,7 @@ describe('DELETE /teams/{id}/meetings/{meetingName}', () => {
           done();
         });
   });
-})
+});
 
 describe('DELETE /teams/{id}', () => {
   const url = `/teams/${team.id}`;
@@ -729,4 +1101,4 @@ describe('DELETE /teams/{id}', () => {
           done();
         });
   });
-})
+});

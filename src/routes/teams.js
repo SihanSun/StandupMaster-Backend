@@ -504,9 +504,7 @@ router.delete('/:id/pending_members/:email',
       }
 
       const i = team.pendingMemberEmails.indexOf(email);
-      if (i!=-1) {
-        team.pendingMemberEmails.splice(i, 1);
-      }
+      team.pendingMemberEmails.splice(i, 1);
 
       await UserInTeamModel.delete(email);
 
@@ -564,7 +562,6 @@ router.put('/:id/announcement',
         return;
       }
 
-      // change owner not supported yet
       if (req.headers.authorization.email !== team.ownerEmail) {
         res.status('401').send('Not authorized to update this team');
         return;
