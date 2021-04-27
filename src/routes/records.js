@@ -1,4 +1,11 @@
 import express from 'express';
+import {body} from 'express-validator';
+import {error} from '../utils/middlewares';
+
+import TeamModel from '../models/team';
+import MeetingRecordModel from '../models/meetingRecord';
+import UserStatusModel from '../models/userStatus';
+
 
 const router = new express.Router();
 
@@ -30,14 +37,28 @@ const router = new express.Router();
  *             schema:
  *               type: array
  *               items:
- *                 $ref: '#/components/schemas/MeetingRecord'
+ *                 $ref: '#/components/schemas/UserStatus'
  *       401:
  *         description: Not authorized. Requester is not a member of the team
  *       404:
  *         description: Team doesn't exist
  */
-router.get('/:teamId', function(req, res) {
-  res.status(501).send('Not Implemented');
+router.get('/:teamId', async function(req, res) {
+  const team = await TeamModel.get(req.params.teamId);
+  if (!team) {
+    res.status(404).send('Team doesn\'t exist');
+    return;
+  }
+
+  if (!team.memberEmails.includes(req.headers.authorization.email)) {
+    res.status(401).send('Not authorized to view this team');
+    return;
+  }
+
+  let records = await MeetingRecordModel.query({'teamId': {'eq': req.params.teamId}}).exec();
+  records = await records.toJSON();
+
+  res.send(records);
 });
 
 /**
@@ -53,7 +74,16 @@ router.get('/:teamId', function(req, res) {
  *       description: team's id
  *       required: true
  *       type: string
- *     responses:
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               dateTime:
+ *                 type: string
+t *     responses:
  *       200:
  *         description: Successful operation.
  *         content:
@@ -61,8 +91,38 @@ router.get('/:teamId', function(req, res) {
  *             schema:
  *               $ref: '#/components/schemas/MeetingRecord'
  */
-router.post('/:teamId', function(req, res) {
-  res.status(501).send('Not Implemented');
-});
+router.post('/:teamId',
+    body('dateTime').exists(),
+    error,
+    async function(req, res) {
+      const dateTime = req.body.dateTime;
+      const team = await TeamModel.get(req.params.teamId);
+
+      if (!team) {
+        res.status(404).send('Team doesn\'t exist');
+        return;
+      }
+
+      if (team.ownerEmail !== req.headers.authorization.email) {
+        res.status(401).send('Not authorized to get team');
+        return;
+      }
+
+      const statuses = await (await UserStatusModel.batchGet(team.memberEmails)).toJSON();
+
+      const payload = {
+        teamId: team.id,
+        dateTime: dateTime,
+        userStatuses: statuses,
+      };
+
+      try {
+        const record = await MeetingRecordModel.create(payload);
+        res.send(record);
+      } catch (error) {
+        res.status(400).send('Record already exists');
+        return;
+      }
+    });
 
 export default router;

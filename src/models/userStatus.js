@@ -33,7 +33,7 @@ import dynamoose from 'dynamoose';
  *         planToday:
  *           type: string
 */
-const userStatusSchema = {
+export const userStatusSchema = {
   email: {
     type: String,
     hashKey: true,
